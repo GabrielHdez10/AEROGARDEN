@@ -1,0 +1,1840 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <title>Dashboard — AeroGarden Cloud</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background-color: #f0f7f2;
+            color: #1a2e22;
+        }
+
+        /* Fondo SVG hidroponia */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='900' height='900'%3E%3Cpath d='M60 800 Q80 650 180 600 Q140 720 160 820Z' fill='%2352b788' opacity='0.07'/%3E%3Cpath d='M60 800 Q100 700 180 600' stroke='%2352b788' stroke-width='1.5' fill='none' opacity='0.12'/%3E%3Cpath d='M100 780 Q115 730 145 710' stroke='%2352b788' stroke-width='1' fill='none' opacity='0.1'/%3E%3Cpath d='M115 760 Q128 715 155 700' stroke='%2352b788' stroke-width='1' fill='none' opacity='0.09'/%3E%3Cpath d='M20 500 Q40 420 110 390 Q80 460 90 510Z' fill='%232d6a4f' opacity='0.06'/%3E%3Cpath d='M20 500 Q65 440 110 390' stroke='%232d6a4f' stroke-width='1.2' fill='none' opacity='0.1'/%3E%3Cpath d='M140 300 Q140 260 160 240 Q180 260 180 300 Q180 320 160 330 Q140 320 140 300Z' fill='%234fc3a1' opacity='0.08'/%3E%3Cpath d='M820 100 Q800 250 700 300 Q740 180 720 80Z' fill='%2352b788' opacity='0.07'/%3E%3Cpath d='M820 100 Q760 200 700 300' stroke='%2352b788' stroke-width='1.5' fill='none' opacity='0.12'/%3E%3Cpath d='M780 120 Q730 190 710 250' stroke='%2352b788' stroke-width='1' fill='none' opacity='0.09'/%3E%3Cpath d='M870 500 Q840 580 770 610 Q800 540 790 490Z' fill='%232d6a4f' opacity='0.06'/%3E%3Cpath d='M870 500 Q815 565 770 610' stroke='%232d6a4f' stroke-width='1.2' fill='none' opacity='0.1'/%3E%3Ccircle cx='750' cy='200' r='18' stroke='%234fc3a1' stroke-width='1.2' fill='none' opacity='0.1'/%3E%3Ccircle cx='750' cy='200' r='6' fill='%234fc3a1' opacity='0.08'/%3E%3Cline x1='768' y1='200' x2='800' y2='200' stroke='%234fc3a1' stroke-width='1' opacity='0.1'/%3E%3Cline x1='750' y1='182' x2='750' y2='155' stroke='%234fc3a1' stroke-width='1' opacity='0.1'/%3E%3Cpath d='M440 880 Q440 820 460 780 Q460 820 480 860' stroke='%2352b788' stroke-width='1.2' fill='none' opacity='0.08'/%3E%3Cpath d='M460 780 Q450 750 430 730' stroke='%2352b788' stroke-width='1' fill='none' opacity='0.07'/%3E%3Cpath d='M460 780 Q470 750 490 730' stroke='%2352b788' stroke-width='1' fill='none' opacity='0.07'/%3E%3Cpath d='M460 60 Q460 30 475 15 Q490 30 490 60 Q490 75 475 82 Q460 75 460 60Z' fill='%234fc3a1' opacity='0.07'/%3E%3Ccircle cx='200' cy='750' r='14' stroke='%234fc3a1' stroke-width='1' fill='none' opacity='0.09'/%3E%3Ccircle cx='200' cy='750' r='5' fill='%234fc3a1' opacity='0.07'/%3E%3Cline x1='186' y1='750' x2='160' y2='750' stroke='%234fc3a1' stroke-width='1' opacity='0.09'/%3E%3Cline x1='200' y1='764' x2='200' y2='790' stroke='%234fc3a1' stroke-width='1' opacity='0.09'/%3E%3C/svg%3E");
+            background-size: 900px 900px;
+            background-repeat: no-repeat;
+            background-position: center center;
+        }
+
+        nav, #dashboard-contenido, .seccion {
+            position: relative;
+            z-index: 1;
+        }
+
+        nav {
+            background: linear-gradient(135deg, #1a3d2b 0%, #2d6a4f 100%);
+            border-bottom: none;
+            padding: 0 24px;
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            flex-wrap: nowrap;
+            box-shadow: 0 3px 20px rgba(26,61,43,0.25);
+            height: 64px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-right: 12px;
+            padding: 8px 0;
+            flex-shrink: 0;
+            text-decoration: none;
+        }
+
+        .nav-logo-img-wrap {
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+
+        .nav-logo img {
+            height: 52px;
+            width: 52px;
+            object-fit: contain;
+            border-radius: 8px;
+            display: block;
+        }
+
+        .nav-logo-texto {
+            font-size: 15px;
+            font-weight: 800;
+            color: #ffffff;
+            letter-spacing: 0.2px;
+            line-height: 1.15;
+        }
+
+        .nav-logo-texto span {
+            color: #95d5b2;
+            display: block;
+            font-size: 9px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            opacity: 1;
+            margin-top: 1px;
+        }
+
+        .nav-divider {
+            width: 1px;
+            height: 24px;
+            background: rgba(255,255,255,0.2);
+            margin: 0 12px;
+            flex-shrink: 0;
+        }
+
+        /* Nav links container */
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        nav button {
+            background: transparent;
+            color: rgba(255,255,255,0.75);
+            border: none;
+            padding: 7px 11px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            font-family: 'DM Sans', sans-serif;
+            transition: all 0.16s ease;
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            white-space: nowrap;
+            margin: 0 1px;
+        }
+
+        nav button:hover {
+            background: rgba(255,255,255,0.12);
+            color: #ffffff;
+        }
+
+        nav button:active {
+            transform: translateY(0);
+            background: rgba(255,255,255,0.18);
+        }
+
+        nav button.nav-btn-activo {
+            background: rgba(255,255,255,0.15);
+            color: #ffffff;
+            font-weight: 600;
+            box-shadow: inset 0 -2.5px 0 #95d5b2;
+        }
+
+        nav button.nav-btn-activo svg {
+            stroke: #ffffff;
+        }
+
+        .nav-logout {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: rgba(255,255,255,0.7) !important;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+            padding: 7px 14px;
+            border-radius: 8px;
+            border: 1.5px solid rgba(255,255,255,0.25) !important;
+            background: rgba(255,255,255,0.06);
+            transition: all 0.18s ease;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .nav-logout:hover {
+            background: #e74c3c !important;
+            color: white !important;
+            border-color: #e74c3c !important;
+        }
+
+        /* Badge de alertas nuevas */
+        .badge-nav {
+            position: absolute;
+            top: 2px;
+            right: 3px;
+            background: #e74c3c;
+            color: white;
+            border-radius: 10px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 9px;
+            font-weight: 700;
+            min-width: 15px;
+            height: 15px;
+            padding: 0 3px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+        }
+
+        .seccion {
+            display: none;
+            padding: 30px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .seccion h1, #dashboard-contenido h1 { font-family: 'Playfair Display', serif;
+            font-size: 26px;
+            margin-bottom: 20px;
+            color: #1a2e22;
+            border-bottom: 2px solid #c8ddd0;
+            padding-bottom: 10px;
+        }
+
+        #dashboard-contenido {
+            padding: 30px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: white;
+            border: 1px solid #c8ddd0;
+            padding: 15px 20px;
+            margin: 8px 0;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+
+        button {
+            background: #2d6a4f;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 10px; font-family: 'DM Sans', sans-serif;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 4px 2px;
+            transition: background 0.2s;
+        }
+
+        button:hover { background: #1a3d2b; }
+        button:disabled { background: #aaa; cursor: not-allowed; }
+
+        input, select, textarea {
+            display: block;
+            width: 100%;
+            padding: 8px 10px;
+            margin: 8px 0;
+            border: 1.5px solid #c8ddd0;
+            border-radius: 10px; font-family: 'DM Sans', sans-serif;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        /* --- Modales --- */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.4);
+            z-index: 999;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-overlay.activo { display: flex; }
+
+        .modal {
+            background: white;
+            padding: 25px;
+            border-radius: 10px; font-family: 'DM Sans', sans-serif;
+            width: 420px;
+            max-width: 95%;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            position: relative;
+        }
+
+        .modal h3 {
+            margin-bottom: 15px;
+            color: #1a2e22;
+            font-size: 18px;
+        }
+
+        .modal-botones {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .modal-botones button:last-child { background: #95a5a6; }
+        .modal-botones button:last-child:hover { background: #7f8c8d; }
+
+        /* --- Tablas --- */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+
+        th {
+            background: #2d6a4f;
+            color: white;
+            padding: 10px 14px;
+            text-align: left;
+            font-size: 13px;
+        }
+
+        td {
+            padding: 10px 14px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 14px;
+        }
+
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #f0f7f3; }
+
+        label {
+            font-size: 13px;
+            color: #555;
+            margin-top: 6px;
+            display: block;
+        }
+
+        .btn-verde  { background: #52b788; }
+        .btn-verde:hover  { background: #2d6a4f; }
+        .btn-rojo   { background: #e74c3c; }
+        .btn-rojo:hover   { background: #c0392b; }
+        .btn-naranja { background: #e67e22; }
+        .btn-naranja:hover { background: #ca6f1e; }
+        .btn-sm { padding: 4px 10px; font-size: 12px; margin: 2px; }
+
+        /* --- Tabs --- */
+        .tabs { display: flex; gap: 4px; margin-bottom: 16px; flex-wrap: wrap; }
+        .tab-btn {
+            padding: 8px 20px;
+            border: none;
+            border-radius: 6px 6px 0 0;
+            cursor: pointer;
+            font-size: 14px;
+            background: #dde1e7;
+            color: #555;
+            margin: 0;
+        }
+        .tab-btn.activo { background: #2d6a4f; color: white; }
+        .tab-contenido { display: none; }
+        .tab-contenido.activo { display: block; }
+        .modal-wide { width: 860px !important; max-height: 85vh; overflow-y: auto; }
+
+        /* --- Badges de estado / prioridad --- */
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .badge-verde  { background: #e8f5e9; color: #2e7d32; }
+        .badge-amarillo { background: #fff8e1; color: #f57f17; }
+        .badge-naranja { background: #fff3e0; color: #e65100; }
+        .badge-rojo   { background: #ffebee; color: #c62828; }
+        .badge-gris   { background: #eceff1; color: #546e7a; }
+        .badge-azul   { background: #e3f2fd; color: #1565c0; }
+
+        /* --- Sección alertas layout --- */
+        .alertas-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 700px) {
+            .alertas-grid { grid-template-columns: 1fr; }
+        }
+
+        .panel-titulo {
+            font-size: 15px;
+            font-weight: 600;
+            color: #1a2e22;
+            margin-bottom: 10px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Fila de filtros */
+        .filtros-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            margin-bottom: 12px;
+        }
+        .filtros-row select,
+        .filtros-row input {
+            width: auto;
+            flex: 1;
+            min-width: 120px;
+            margin: 0;
+        }
+
+        /* Color filas historial según prioridad */
+        tr.prioridad-critica td { border-left: 4px solid #c62828; }
+        tr.prioridad-alta    td { border-left: 4px solid #e65100; }
+        tr.prioridad-media   td { border-left: 4px solid #f57f17; }
+        tr.prioridad-baja    td { border-left: 4px solid #2e7d32; }
+
+        /* ============================================================ */
+        /* DASHBOARD INICIO                                              */
+        /* ============================================================ */
+
+        .inicio-bienvenida {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .inicio-avatar {
+            width: 80px; height: 80px;
+            border-radius: 50%;
+            background: #2d6a4f;
+            color: white;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 32px; font-weight: 700;
+            border: 3px solid #c8ddd0;
+            box-shadow: 0 4px 14px rgba(26,61,43,0.15);
+            flex-shrink: 0;
+        }
+
+        .inicio-saludo { font-size: 26px; font-weight: 700; color: #1a2e22; font-family: 'Playfair Display', serif; letter-spacing: -0.3px; }
+        .inicio-fecha  { font-size: 13px; color: #999; margin-top: 2px; }
+
+        /* Fila de KPI cards */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 14px;
+            margin-bottom: 24px;
+        }
+
+        @media (max-width: 900px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 500px) { .kpi-grid { grid-template-columns: 1fr; } }
+
+        .kpi-card {
+            background: white;
+            border-radius: 10px; font-family: 'DM Sans', sans-serif;
+            padding: 18px 20px;
+            border: 1px solid #c8ddd0;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            cursor: pointer;
+            transition: box-shadow 0.2s, transform 0.15s;
+            text-decoration: none;
+        }
+
+        .kpi-card:hover { border-color: #52b788;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+
+        .kpi-icono {
+            font-size: 30px;
+            width: 80px; height: 80px;
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .kpi-icono-verde  { background: #d8f3dc; }
+        .kpi-icono-azul   { background: #e3f2fd; }
+        .kpi-icono-naranja{ background: #fff3e0; }
+        .kpi-icono-rojo   { background: #ffebee; }
+        .kpi-icono-morado { background: #f3e5f5; }
+
+        .kpi-valor { font-size: 28px; font-weight: 700; color: #1a2e22; line-height: 1; font-family: 'Playfair Display', serif; }
+        .kpi-label { font-size: 12px; color: #6b7c72; margin-top: 4px; font-weight: 500; letter-spacing: 0.3px; text-transform: uppercase; font-size: 11px; }
+
+        /* Grid inferior */
+        .inicio-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+        }
+
+        @media (max-width: 750px) { .inicio-grid { grid-template-columns: 1fr; } }
+
+        .inicio-panel {
+            background: white;
+            border-radius: 10px; font-family: 'DM Sans', sans-serif;
+            border: 1px solid #c8ddd0;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+
+        .inicio-panel-header {
+            padding: 12px 16px;
+            background: #f0f7f3;
+            border-bottom: 1px solid #e8e8e8;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .inicio-panel-header strong { font-size: 14px; color: #1a2e22; }
+
+        .inicio-panel-link {
+            font-size: 12px;
+            color: #3498db;
+            cursor: pointer;
+            text-decoration: none;
+            background: none;
+            border: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .inicio-panel-link:hover { text-decoration: underline; background: none; color: #2980b9; }
+
+        .inicio-panel-body { padding: 0; }
+
+        .sensor-fila {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 11px 16px;
+            border-bottom: 1px solid #f4f4f4;
+            font-size: 14px;
+        }
+
+        .sensor-fila:last-child { border-bottom: none; }
+
+        .sensor-nombre { color: #555; font-size: 13px; }
+
+        .sensor-valor-big {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1a2e22;
+        }
+
+        .sensor-unidad { font-size: 12px; color: #aaa; margin-left: 3px; }
+
+        .sensor-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: #ccc;
+            flex-shrink: 0;
+        }
+
+        .sensor-dot-on  { background: #52b788; box-shadow: 0 0 0 3px #e8f5e9; }
+        .sensor-dot-off { background: #e74c3c; box-shadow: 0 0 0 3px #ffebee; }
+
+        .alerta-fila {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 11px 16px;
+            border-bottom: 1px solid #f4f4f4;
+            font-size: 13px;
+        }
+
+        .alerta-fila:last-child { border-bottom: none; }
+
+        .cultivo-fila {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 11px 16px;
+            border-bottom: 1px solid #f4f4f4;
+            font-size: 13px;
+        }
+
+        .cultivo-fila:last-child { border-bottom: none; }
+
+        .inicio-vacio {
+            padding: 24px 16px;
+            text-align: center;
+            color: #bbb;
+            font-size: 13px;
+        }
+
+        .bomba-mini {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 11px 16px;
+        }
+
+        .bomba-dot {
+            width: 14px; height: 14px;
+            border-radius: 50%;
+            background: #95a5a6;
+            flex-shrink: 0;
+            transition: background 0.3s;
+        }
+
+        .bomba-dot-on  { background: #52b788; box-shadow: 0 0 0 4px #e8f5e9; animation: pulso 1.5s infinite; }
+        .bomba-dot-off { background: #e74c3c; }
+
+        @keyframes pulso {
+            0%, 100% { box-shadow: 0 0 0 4px #e8f5e9; }
+            50%       { box-shadow: 0 0 0 7px #c8e6c9; }
+        }
+
+        /* ============================================================ */
+        /* TOAST NOTIFICATIONS                                           */
+        /* ============================================================ */
+        #toast-contenedor {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+        }
+
+        /* ── Fondo general ── */
+        body {
+            background-image:
+                radial-gradient(ellipse at 0% 0%, rgba(82,183,136,.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 100% 100%, rgba(149,213,178,.06) 0%, transparent 50%);
+            min-height: 100vh;
+        }
+
+        /* ── Botones generales ── */
+        button {
+            letter-spacing: 0.2px;
+        }
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(26,61,43,0.2);
+        }
+        button:active { transform: translateY(0); }
+
+        .btn-verde { background: #52b788; box-shadow: 0 3px 10px rgba(82,183,136,0.3); }
+        .btn-verde:hover { background: #2d6a4f; }
+        .btn-rojo { background: #e74c3c; box-shadow: 0 3px 10px rgba(231,76,60,0.25); }
+        .btn-rojo:hover { background: #c0392b; }
+
+        /* ── Inputs ── */
+        input, select, textarea {
+            border: 1.5px solid #c8ddd0;
+            border-radius: 10px;
+            font-family: 'DM Sans', sans-serif;
+            color: #1a2e22;
+            background: #fff;
+            transition: border-color .2s, box-shadow .2s;
+        }
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #52b788;
+            box-shadow: 0 0 0 3.5px rgba(82,183,136,.16);
+        }
+
+        /* ── Cards ── */
+        .card, .inicio-panel, .kpi-card {
+            background: #fff;
+            border: 1px solid #c8ddd0;
+            box-shadow: 0 2px 12px rgba(26,61,43,0.07);
+        }
+        .kpi-card { border-radius: 14px; }
+
+        /* ── Tablas ── */
+        th {
+            background: #1a3d2b;
+            font-weight: 600;
+            letter-spacing: 0.4px;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+        tr:hover td { background: #f0f7f3; }
+
+        /* ── Modales ── */
+        .modal {
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(26,61,43,0.18);
+        }
+        .modal h3 {
+            font-family: 'Playfair Display', serif;
+            color: #1a2e22;
+            font-size: 20px;
+        }
+
+        /* ── Títulos de sección ── */
+        .seccion h1, #dashboard-contenido h1 {
+            font-family: 'Playfair Display', serif;
+            color: #1a2e22;
+            border-bottom: 2px solid #c8ddd0;
+        }
+
+        /* ── Inicio panel header ── */
+        .inicio-panel-header {
+            background: #f0f7f3;
+            border-bottom: 1px solid #c8ddd0;
+        }
+        .inicio-panel-header strong {
+            font-weight: 600;
+            color: #1a2e22;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <div class="nav-logo">
+        <div class="nav-logo-img-wrap">
+            <img src="{{ url_for('static', filename='img/Logo3.png') }}" alt="Aerogarden Cloud">
+        </div>
+        <div class="nav-logo-texto">
+            Aerogarden Cloud
+            <span data-i18n="nav_tagline">Cultiva tu futuro</span>
+        </div>
+    </div>
+    <div class="nav-divider"></div>
+    <button onclick="mostrarSeccion('dashboard-contenido')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span data-i18n="nav_inicio">Inicio</span>
+    </button>
+    <button onclick="mostrarSeccion('seccion-hardware')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="2" x2="9" y2="4"/><line x1="15" y1="2" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="22"/><line x1="15" y1="20" x2="15" y2="22"/><line x1="20" y1="9" x2="22" y2="9"/><line x1="20" y1="14" x2="22" y2="14"/><line x1="2" y1="9" x2="4" y2="9"/><line x1="2" y1="14" x2="4" y2="14"/></svg>
+        <span data-i18n="nav_hardware">Hardware</span>
+    </button>
+    <button onclick="mostrarSeccion('seccion-logica')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/></svg>
+        <span data-i18n="nav_logica">Lógica</span>
+    </button>
+    <button onclick="mostrarSeccion('seccion-analitica')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        <span data-i18n="nav_analitica">Analítica</span>
+    </button>
+    <button onclick="mostrarSeccion('seccion-cultivos')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22V12m0 0C12 7 7 4 2 4c0 5 3 9 7 10m3-2c0-5 5-8 10-8-1 5-4 8-10 8"/></svg>
+        <span data-i18n="nav_cultivos">Cultivos</span>
+    </button>
+    <button id="btn-nav-alertas" onclick="mostrarSeccion('seccion-alertas'); cargarAlertasSeccion();">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+        <span data-i18n="nav_alertas">Alertas</span>
+        <span id="badge-alertas-nav" class="badge-nav">0</span>
+    </button>
+    <button onclick="mostrarSeccion('seccion-relevador'); cargarSeccionRelevador()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v6m0 0C10 12 6 14 6 18a6 6 0 0012 0c0-4-4-6-6-10z"/></svg>
+        <span data-i18n="nav_bomba">Bomba</span>
+    </button>
+    <button onclick="mostrarSeccion('seccion-wifi'); cargarRedActual()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0114.08 0"/><path d="M1.42 9a16 16 0 0121.16 0"/><path d="M8.53 16.11a6 6 0 016.95 0"/><circle cx="12" cy="20" r="1" fill="currentColor"/></svg>
+        <span data-i18n="nav_wifi">WiFi</span>
+    </button>
+    <button onclick="mostrarSeccion('seccion-configuracion')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span data-i18n="nav_perfil">Perfil</span>
+    </button>
+    <a href="/logout" class="nav-logout">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        <span data-i18n="nav_cerrar">Cerrar sesión</span>
+    </a>
+</nav>
+
+
+<div id="dashboard-contenido">
+
+    
+    <div class="inicio-bienvenida">
+        <div class="inicio-avatar" id="inicio-avatar">U</div>
+        <div>
+            <div class="inicio-saludo"><span data-i18n="inicio_bienvenido">Bienvenido,</span> <span id="inicio-nombre">—</span> 👋</div>
+            <div class="inicio-fecha" id="inicio-fecha"></div>
+        </div>
+    </div>
+
+    
+    <div class="inicio-grid">
+
+        
+        <div class="inicio-panel">
+            <div class="inicio-panel-header">
+                <strong data-i18n="inicio_lecturas">📡 Lecturas recientes</strong>
+                <button class="inicio-panel-link" onclick="mostrarSeccion('seccion-logica')" data-i18n="inicio_ver_en_vivo">Ver en vivo →</button>
+            </div>
+            <div class="inicio-panel-body" id="inicio-lecturas">
+                <div class="inicio-vacio">Cargando sensores...</div>
+            </div>
+        </div>
+
+        
+        <div class="inicio-panel">
+            <div class="inicio-panel-header">
+                <strong data-i18n="inicio_alertas">🔔 Alertas recientes</strong>
+                <button class="inicio-panel-link" onclick="mostrarSeccion('seccion-alertas'); cargarAlertasSeccion();" data-i18n="inicio_ver_todas">Ver todas →</button>
+            </div>
+            <div class="inicio-panel-body" id="inicio-alertas">
+                <div class="inicio-vacio">Cargando alertas...</div>
+            </div>
+        </div>
+
+        
+        <div class="inicio-panel">
+            <div class="inicio-panel-header">
+                <strong data-i18n="inicio_cultivos">🌿 Cultivos registrados</strong>
+                <button class="inicio-panel-link" onclick="mostrarSeccion('seccion-cultivos')" data-i18n="inicio_gestionar">Gestionar →</button>
+            </div>
+            <div class="inicio-panel-body" id="inicio-cultivos">
+                <div class="inicio-vacio">Cargando cultivos...</div>
+            </div>
+        </div>
+
+        
+        <div class="inicio-panel">
+            <div class="inicio-panel-header">
+                <strong data-i18n="inicio_bomba">💧 Estado de la Bomba</strong>
+                <button class="inicio-panel-link" onclick="mostrarSeccion('seccion-relevador'); cargarSeccionRelevador()" data-i18n="inicio_controlar">Controlar →</button>
+            </div>
+            <div class="inicio-panel-body" id="inicio-bomba">
+                <div class="inicio-vacio">Cargando estado...</div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+
+<div id="seccion-hardware" class="seccion">
+    <h1 data-i18n="hw_titulo">Integración de Hardware</h1>
+    <button onclick="abrirModal('modal-dispositivo')" data-i18n="hw_agregar_disp">+ Agregar Dispositivo</button>
+    <button id="btn-agregar-sensor" onclick="abrirModal('modal-sensor')" disabled data-i18n="hw_agregar_sensor">+ Agregar Sensor</button>
+    <div id="lista-hardware" style="margin-top: 20px;">
+        <h3 data-i18n="hw_lista_titulo">Dispositivos y Sensores Conectados</h3>
+    </div>
+</div>
+
+
+<div id="seccion-logica" class="seccion">
+    <h1 data-i18n="logica_titulo">Lógica de Control</h1>
+    <div class="card" style="margin-bottom:16px;">
+        <label style="font-weight:600;" data-i18n="logica_sel_sensor">Seleccionar Sensor:</label>
+        <select id="selectSensorLogica" onchange="limpiarVisualizacion()" style="margin-bottom:12px;">
+            <option value="" data-i18n="logica_sel_placeholder">-- Seleccione un sensor --</option>
+        </select>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button onclick="verificarEstadoSensor()" data-i18n="logica_verificar">🔍 Verificar Estado</button>
+            <button class="btn-verde" onclick="visualizarInformacion()" data-i18n="logica_visualizar">📈 Visualizar en Tiempo Real</button>
+        </div>
+    </div>
+    <div id="resultado-logica" style="padding:0;"></div>
+</div>
+
+
+<div id="seccion-analitica" class="seccion">
+    <h1 data-i18n="analitica_titulo">Analítica y Reportes</h1>
+
+    <div class="tabs">
+        <button class="tab-btn activo" onclick="cambiarTabAnalitica('tab-an-sensores', this)" data-i18n="analitica_tab_sensores">📡 Sensores</button>
+        <button class="tab-btn" onclick="cambiarTabAnalitica('tab-an-cultivos', this); cargarReporteCultivos()" data-i18n="analitica_tab_cultivos">🌱 Reporte Cultivos</button>
+        <button class="tab-btn" onclick="cambiarTabAnalitica('tab-an-cosechas', this); cargarReporteCosechas()" data-i18n="analitica_tab_cosechas">🌾 Reporte Cosechas</button>
+    </div>
+
+    
+    <div id="tab-an-sensores" class="tab-contenido activo">
+        <div class="card" style="margin-bottom:14px;">
+            <label style="font-weight:600;" data-i18n="analitica_sensor">Sensor:</label>
+            <select id="selectSensorAnalitica" style="margin:8px 0;"></select>
+            <div style="margin-top: 8px;">
+                <button onclick="cargarGrafica('ahora')" data-i18n="analitica_ahora">Ahora (1h)</button>
+                <button onclick="cargarGrafica('24h')" data-i18n="analitica_24h">Últimas 24h</button>
+                <button onclick="cargarGrafica('semana')" data-i18n="analitica_semana">Última Semana</button>
+            </div>
+        </div>
+        <div style="background:white;padding:20px;border-radius:8px;">
+            <canvas id="graficaSensor"></canvas>
+        </div>
+    </div>
+
+    
+    <div id="tab-an-cultivos" class="tab-contenido">
+        <div class="card" style="margin-bottom:14px; display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+            <div style="flex:1; min-width:160px;">
+                <label data-i18n="an_tipo_cultivo">Tipo de cultivo</label>
+                <select id="filtro-an-tipo-cultivo">
+                    <option value="" data-i18n="an_todos_tipos">Todos los tipos</option>
+                </select>
+            </div>
+            <div style="flex:1; min-width:140px;">
+                <label data-i18n="an_fecha_desde">Fecha desde</label>
+                <input type="date" id="filtro-an-fecha-desde">
+            </div>
+            <div style="flex:1; min-width:140px;">
+                <label data-i18n="an_fecha_hasta">Fecha hasta</label>
+                <input type="date" id="filtro-an-fecha-hasta">
+            </div>
+            <button class="btn-verde" onclick="cargarReporteCultivos()" data-i18n="an_filtrar">🔍 Filtrar</button>
+        </div>
+
+        
+        <div id="kpi-reporte-cultivos" style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:16px;"></div>
+
+        
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+            <div style="background:white; padding:16px; border-radius:8px; border:1px solid #e0e0e0;">
+                <strong style="font-size:13px; color:#555;" data-i18n="an_plantas_tipo">Plantas por tipo de cultivo</strong>
+                <canvas id="graficaCultivosTipo" style="margin-top:10px;"></canvas>
+            </div>
+            <div style="background:white; padding:16px; border-radius:8px; border:1px solid #e0e0e0;">
+                <strong style="font-size:13px; color:#555;" data-i18n="an_siembras_mes">Siembras por mes</strong>
+                <canvas id="graficaCultivosMes" style="margin-top:10px;"></canvas>
+            </div>
+        </div>
+        <div id="tabla-reporte-cultivos"><p style="color:#888;">Cargando reporte...</p></div>
+    </div>
+
+    
+    <div id="tab-an-cosechas" class="tab-contenido">
+        <div class="card" style="margin-bottom:14px; display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+            <div style="flex:1; min-width:160px;">
+                <label data-i18n="an_cultivo">Cultivo</label>
+                <select id="filtro-an-cultivo-cosecha">
+                    <option value="" data-i18n="an_todos_cult">Todos los cultivos</option>
+                </select>
+            </div>
+            <div style="flex:1; min-width:140px;">
+                <label data-i18n="an_fecha_desde">Fecha desde</label>
+                <input type="date" id="filtro-an-cosecha-desde">
+            </div>
+            <div style="flex:1; min-width:140px;">
+                <label>Fecha hasta</label>
+                <input type="date" id="filtro-an-cosecha-hasta">
+            </div>
+            <button class="btn-verde" onclick="cargarReporteCosechas()" data-i18n="an_filtrar">🔍 Filtrar</button>
+        </div>
+
+        
+        <div id="kpi-reporte-cosechas" style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:16px;"></div>
+
+        
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+            <div style="background:white; padding:16px; border-radius:8px; border:1px solid #e0e0e0;">
+                <strong style="font-size:13px; color:#555;" data-i18n="an_cant_cos">Cantidad cosechada por cultivo</strong>
+                <canvas id="graficaCosechasCultivo" style="margin-top:10px;"></canvas>
+            </div>
+            <div style="background:white; padding:16px; border-radius:8px; border:1px solid #e0e0e0;">
+                <strong style="font-size:13px; color:#555;" data-i18n="an_cosechas_mes">Cosechas por mes</strong>
+                <canvas id="graficaCosechasMes" style="margin-top:10px;"></canvas>
+            </div>
+        </div>
+        <div id="tabla-reporte-cosechas"><p style="color:#888;">Cargando reporte...</p></div>
+    </div>
+</div>
+
+
+<div id="seccion-cultivos" class="seccion">
+    <h1 data-i18n="cult_titulo">Gestión de Cultivos</h1>
+    <div style="margin-bottom: 16px;">
+        <button onclick="abrirModal('modal-siembra')" data-i18n="cult_registrar_siembra">🌱 Registrar Siembra</button>
+        <button onclick="abrirModal('modal-cosecha')" data-i18n="cult_registrar_cosecha">🌾 Registrar Cosecha</button>
+        <button class="btn-verde" onclick="abrirModal('modal-tipo-cultivo')" data-i18n="cult_agregar_tipo">+ Agregar Tipo de Cultivo</button>
+    </div>
+
+    
+    <div class="tabs">
+        <button class="tab-btn activo" onclick="cambiarTabCultivos('tab-sec-cultivos', this)" data-i18n="cult_tab_cultivos">🌱 Cultivos</button>
+        <button class="tab-btn" onclick="cambiarTabCultivos('tab-sec-cosechas', this)" data-i18n="cult_tab_cosechas">🌾 Cosechas</button>
+    </div>
+
+    <div id="tab-sec-cultivos" class="tab-contenido activo">
+        <div id="tabla-cultivos-seccion"><p style="color:#888;">Cargando cultivos...</p></div>
+    </div>
+    <div id="tab-sec-cosechas" class="tab-contenido">
+        <div id="tabla-cosechas-seccion"><p style="color:#888;">Cargando cosechas...</p></div>
+    </div>
+</div>
+
+
+<div id="seccion-alertas" class="seccion">
+    <h1 data-i18n="alert_titulo">🔔 Centro de Alertas</h1>
+
+    <div class="tabs">
+        <button class="tab-btn activo" onclick="cambiarTabAlerta('tab-historial', this)" data-i18n="alert_tab_historial">📋 Historial de Alertas</button>
+        <button class="tab-btn" onclick="cambiarTabAlerta('tab-parametros', this)" data-i18n="alert_tab_params">⚙️ Parámetros / Umbrales</button>
+    </div>
+
+    
+    <div id="tab-historial" class="tab-contenido activo">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+            <div class="filtros-row" style="flex:1;">
+                <select id="filtro-prioridad" onchange="aplicarFiltros()">
+                    <option value="" data-i18n="alert_todas_prior">Todas las prioridades</option>
+                    <option value="critica" data-i18n="alert_critica">🔴 Crítica</option>
+                    <option value="alta" data-i18n="alert_alta">🟠 Alta</option>
+                    <option value="media" data-i18n="alert_media">🟡 Media</option>
+                    <option value="baja" data-i18n="alert_baja">🟢 Baja</option>
+                </select>
+                <select id="filtro-estado" onchange="aplicarFiltros()">
+                    <option value="" data-i18n="alert_todos_est">Todos los estados</option>
+                    <option value="nueva" data-i18n="alert_nueva">Nueva</option>
+                    <option value="vista" data-i18n="alert_vista">Vista</option>
+                    <option value="resuelta" data-i18n="alert_resuelta">Resuelta</option>
+                </select>
+                <select id="filtro-sensor-historial" onchange="aplicarFiltros()">
+                    <option value="" data-i18n="alert_todos_sens">Todos los sensores</option>
+                </select>
+            </div>
+            <button class="btn-verde" onclick="cargarHistorialAlertas()" data-i18n="alert_actualizar">↺ Actualizar</button>
+        </div>
+        <div id="tabla-historial-alertas"><p style="color:#888;">Cargando historial...</p></div>
+    </div>
+
+    
+    <div id="tab-parametros" class="tab-contenido">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <p style="color:#555; font-size:14px;" data-i18n="alert_desc_params">Define los umbrales que generarán alertas para cada sensor.</p>
+            <button class="btn-verde" onclick="abrirModal('modal-parametro')" data-i18n="alert_nuevo_param">+ Nuevo Parámetro</button>
+        </div>
+        <div id="tabla-parametros-alerta"><p style="color:#888;">Cargando parámetros...</p></div>
+    </div>
+</div>
+
+
+<div id="seccion-relevador" class="seccion">
+    <h1 data-i18n="bomba_titulo">💧 Control de Bomba / Relevador</h1>
+
+    
+    <div class="card" style="margin-bottom:16px;">
+        <label style="font-weight:600;" data-i18n="bomba_dispositivo">🔌 Dispositivo a controlar</label>
+        <select id="select-bomba-dispositivo" onchange="cambiarDispositivoBomba()"
+                style="margin-top:8px; width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; font-size:14px;">
+            <option value="">Cargando dispositivos...</option>
+        </select>
+    </div>
+
+    
+    <div class="card" style="display:flex; align-items:center; gap:20px; flex-wrap:wrap; margin-bottom:16px;">
+        <div id="indicador-bomba" style="
+            width:64px; height:64px; border-radius:50%;
+            background:#95a5a6;
+            display:flex; align-items:center; justify-content:center;
+            font-size:28px;
+            box-shadow:0 0 0 6px #ecf0f1;
+            transition:background 0.4s, box-shadow 0.4s;">💧
+        </div>
+        <div>
+            <div style="font-size:18px; font-weight:700;" id="texto-estado-bomba">Estado: —</div>
+            <div style="font-size:13px; color:#888; margin-top:4px;" id="texto-modo-bomba">Modo: —</div>
+        </div>
+        <div style="margin-left:auto; display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn-verde" onclick="controlManualBomba('encendido')" data-i18n="bomba_encender">⚡ Encender ahora</button>
+            <button class="btn-rojo"  onclick="controlManualBomba('apagado')" data-i18n="bomba_apagar">⏹ Apagar ahora</button>
+        </div>
+    </div>
+
+    
+    <div class="card">
+        <h3 style="margin-bottom:14px; color:#2c3e50;" data-i18n="bomba_temporizador">⏱ Temporizador Automático</h3>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+            <div>
+                <label>Tiempo <strong>ENCENDIDA</strong> (segundos)</label>
+                <input type="number" id="input-tiempo-on" min="1" max="3600" value="30"
+                       oninput="actualizarPreviewBomba()"
+                       style="font-size:22px; font-weight:700; text-align:center; color:#27ae60;">
+                <div style="font-size:12px; color:#aaa; margin-top:2px;" id="preview-on">= 30 seg</div>
+            </div>
+            <div>
+                <label>Tiempo <strong>APAGADA</strong> (segundos)</label>
+                <input type="number" id="input-tiempo-off" min="1" max="3600" value="60"
+                       oninput="actualizarPreviewBomba()"
+                       style="font-size:22px; font-weight:700; text-align:center; color:#e74c3c;">
+                <div style="font-size:12px; color:#aaa; margin-top:2px;" id="preview-off">= 60 seg</div>
+            </div>
+        </div>
+        <div style="margin-top:14px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+            <button class="btn-verde" onclick="guardarConfigBomba()" data-i18n="bomba_guardar">💾 Guardar temporizador</button>
+            <button onclick="guardarConfigBomba()" data-i18n="bomba_modo_auto_btn">🔄 Volver a modo automático</button>
+            <span id="msg-config-bomba" style="font-size:13px; color:#27ae60; display:none;">✔ Guardado</span>
+        </div>
+    </div>
+
+    
+    <div class="card" style="margin-top:16px;">
+        <h3 style="margin-bottom:10px; color:#2c3e50;" data-i18n="bomba_nivel">📏 Nivel de Agua (Sensor Ultrasónico)</h3>
+        <div id="display-nivel-agua" style="font-size:36px; font-weight:700; color:#2980b9;">— cm</div>
+        <div style="font-size:12px; color:#aaa;" id="fecha-nivel-agua" data-i18n="bomba_sin_datos">Sin datos aún</div>
+        <div id="alerta-nivel-bajo" style="
+            display:none; margin-top:10px; padding:10px 14px;
+            background:#ffebee; border-left:4px solid #c62828;
+            border-radius:5px; color:#c62828; font-weight:600;">
+            ⚠️ ¡<span data-i18n="bomba_nivel_bajo">⚠️ ¡NIVEL DE AGUA BAJO! Revisa el depósito.</span>
+        </div>
+    </div>
+</div>
+
+
+<div id="seccion-configuracion" class="seccion">
+    <h1 data-i18n="perfil_titulo">Configuración de Cuenta</h1>
+
+    
+    <div class="card" style="display:flex; align-items:center; gap:24px; flex-wrap:wrap;">
+        <div style="position:relative; cursor:pointer;" onclick="document.getElementById('inputFoto').click()">
+            <div id="fotoInicial" style="
+                width:90px; height:90px; border-radius:50%;
+                background:#2c3e50; color:white;
+                display:flex; align-items:center; justify-content:center;
+                font-size:36px; font-weight:700; user-select:none;">U</div>
+            <img id="fotoPerfil" src="" alt="Foto de perfil" style="
+                display:none; width:90px; height:90px;
+                border-radius:50%; object-fit:cover;
+                border:3px solid #2c3e50;">
+            <div style="
+                position:absolute; bottom:0; right:0;
+                background:#27ae60; color:white;
+                border-radius:50%; width:26px; height:26px;
+                display:flex; align-items:center; justify-content:center;
+                font-size:13px; border:2px solid white;">✏️</div>
+        </div>
+        <input type="file" id="inputFoto" accept="image/*" style="display:none"
+               onchange="subirFotoPerfil(this)">
+        <div>
+            <div style="font-size:18px; font-weight:600;" id="userNombre">—</div>
+            <div style="color:#666; font-size:14px;" id="userCorreo">—</div>
+            <div style="font-size:12px; color:#999; margin-top:4px;" data-i18n="perfil_foto_hint">Haz clic en la foto para cambiarla (máx. 2 MB)</div>
+        </div>
+    </div>
+
+    
+    <div class="card" style="margin-top:12px;">
+        <h3 data-i18n="perfil_datos">👤 Datos personales</h3>
+        <p style="font-size:13px; color:#888; margin-bottom:14px;" data-i18n="perfil_datos_desc">Actualiza tu nombre y apellidos.</p>
+        <label data-i18n="perfil_nombre">Nombre(s)</label>
+        <input type="text" id="editNombre" placeholder="Tu(s) nombre(s)">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:2px;">
+            <div>
+                <label data-i18n="perfil_ap_paterno">Apellido paterno</label>
+                <input type="text" id="editApellidoPaterno" placeholder="Apellido paterno">
+            </div>
+            <div>
+                <label data-i18n="perfil_ap_materno">Apellido materno</label>
+                <input type="text" id="editApellidoMaterno" placeholder="Apellido materno">
+            </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px; margin-top:10px; flex-wrap:wrap;">
+            <button id="btnActualizarNombre" onclick="actualizarNombrePerfil()" class="btn-verde">
+                <span data-i18n="perfil_guardar">Guardar cambios</span>
+            </button>
+            <span id="msgNombre" style="font-size:13px; display:none;"></span>
+        </div>
+    </div>
+
+    
+    <div class="card" style="margin-top:12px;">
+        <h3 data-i18n="perfil_seguridad">🔒 Seguridad</h3>
+        <label data-i18n="perfil_nueva_pass">Nueva contraseña</label>
+        <input type="password" id="nuevaPass" placeholder="Mínimo 6 caracteres">
+        <button id="btnCambiarPass" onclick="cambiarPassword()" class="btn-verde" style="margin-top:6px;">
+            <span data-i18n="perfil_actualizar_pass">Actualizar Contraseña</span>
+        </button>
+    </div>
+
+    
+    <div class="card" style="margin-top:12px;">
+        <h3 data-i18n="perfil_preferencias">🌐 Preferencias</h3>
+        <p style="font-size:13px; color:#888; margin-bottom:14px;" data-i18n="perfil_idioma">Idioma de la interfaz</p>
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+            <select id="select-idioma" onchange="cambiarIdiomaApp(this.value)"
+                    style="padding:10px 16px; border-radius:8px; border:1.5px solid #c8ddd0;
+                           font-size:14px; font-family:'DM Sans',sans-serif; background:#fff;
+                           color:#1a2e22; cursor:pointer; min-width:180px;">
+                <option value="es">🇲🇽 Español</option>
+                <option value="en">🇺🇸 English</option>
+            </select>
+            <span id="msg-idioma" style="font-size:13px; color:#27ae60; display:none;">✔ Guardado</span>
+        </div>
+    </div>
+
+    <div class="card" style="margin-top:12px;">
+        <h3 data-i18n="perfil_ayuda">ℹ️ Ayuda y Tips de uso</h3>
+        <p style="font-size:13px; color:#888; margin-bottom:16px;" data-i18n="ayuda_desc">Guía rápida para sacarle el mayor provecho a Aerogarden Cloud.</p>
+
+        <div style="display:flex; flex-direction:column; gap:12px;">
+
+            <details style="border:1px solid #e0ece6; border-radius:10px; padding:12px 16px; cursor:pointer;">
+                <summary style="font-weight:600; color:#1a3d2b; font-size:14px;">🔌 ¿Cómo conectar mi Arduino por primera vez?</summary>
+                <p style="margin-top:10px; font-size:13px; color:#555; line-height:1.7;">
+                    1. Ve a <strong>Hardware</strong> y crea un nuevo dispositivo.<br>
+                    2. Se generará un <strong>código de emparejamiento</strong> (ej: HIDRO-1234).<br>
+                    3. Carga ese código en el sketch de tu Arduino.<br>
+                    4. El Arduino se emparejará automáticamente y recibirás su device_id.<br>
+                    5. Regresa a Hardware y agrega los sensores de ese dispositivo.
+                </p>
+            </details>
+
+            <details style="border:1px solid #e0ece6; border-radius:10px; padding:12px 16px; cursor:pointer;">
+                <summary style="font-weight:600; color:#1a3d2b; font-size:14px;">📡 ¿Por qué un sensor aparece como "Sin señal" o "Desconectado"?</summary>
+                <p style="margin-top:10px; font-size:13px; color:#555; line-height:1.7;">
+                    El sistema espera una lectura cada <strong>10 segundos</strong>. Si pasan más de 30 segundos sin recibir datos, el sensor se marca como <strong>Sin señal</strong>.<br><br>
+                    Causas comunes: el Arduino perdió WiFi, cambió la IP del servidor, o el token del Arduino no coincide con el del servidor.<br><br>
+                    Revisa el <strong>Monitor Serial</strong> del Arduino IDE para ver qué está pasando.
+                </p>
+            </details>
+
+            <details style="border:1px solid #e0ece6; border-radius:10px; padding:12px 16px; cursor:pointer;">
+                <summary style="font-weight:600; color:#1a3d2b; font-size:14px;">📶 ¿Cómo cambio la red WiFi del Arduino sin tocarlo físicamente?</summary>
+                <p style="margin-top:10px; font-size:13px; color:#555; line-height:1.7;">
+                    Ve a la sección <strong>WiFi</strong> en el menú.<br>
+                    Selecciona el dispositivo, escribe el nombre de la nueva red (SSID) y su contraseña, y presiona <strong>Enviar al Arduino</strong>.<br>
+                    En el próximo ciclo (máx. 10 seg) el Arduino recibirá la nueva config y se reconectará automáticamente.
+                </p>
+            </details>
+
+            <details style="border:1px solid #e0ece6; border-radius:10px; padding:12px 16px; cursor:pointer;">
+                <summary style="font-weight:600; color:#1a3d2b; font-size:14px;">💧 ¿Cómo funciona el control de la bomba?</summary>
+                <p style="margin-top:10px; font-size:13px; color:#555; line-height:1.7;">
+                    Desde la sección <strong>Bomba</strong> puedes elegir entre dos modos:<br><br>
+                    <strong>Automático:</strong> defines cuántos segundos permanece encendida y cuántos apagada. El Arduino alterna solo.<br><br>
+                    <strong>Manual:</strong> tú decides cuándo encender o apagar desde el dashboard en tiempo real.
+                </p>
+            </details>
+
+            <details style="border:1px solid #e0ece6; border-radius:10px; padding:12px 16px; cursor:pointer;">
+                <summary style="font-weight:600; color:#1a3d2b; font-size:14px;">🔔 ¿Cómo configuro alertas para mis sensores?</summary>
+                <p style="margin-top:10px; font-size:13px; color:#555; line-height:1.7;">
+                    Ve a <strong>Alertas → Parámetros / Umbrales</strong> y crea un nuevo parámetro.<br>
+                    Elige el sensor, la condición (mayor que, menor que, igual a) y el valor umbral.<br>
+                    Cuando el Arduino mande una lectura que supere ese umbral, se registrará automáticamente una alerta.
+                </p>
+            </details>
+
+            <details style="border:1px solid #e0ece6; border-radius:10px; padding:12px 16px; cursor:pointer;">
+                <summary style="font-weight:600; color:#1a3d2b; font-size:14px;">👥 ¿Cómo comparto mi dispositivo con otra persona?</summary>
+                <p style="margin-top:10px; font-size:13px; color:#555; line-height:1.7;">
+                    Baja en esta misma página hasta la sección <strong>Miembros y Accesos</strong>.<br>
+                    Selecciona el dispositivo, escribe el correo del otro usuario (debe estar registrado) y elige si tendrá permiso de <strong>solo ver</strong> o <strong>controlar</strong>.
+                </p>
+            </details>
+
+            <details style="border:1px solid #e0ece6; border-radius:10px; padding:12px 16px; cursor:pointer;">
+                <summary style="font-weight:600; color:#1a3d2b; font-size:14px;">🌱 ¿Cómo registro mis cultivos y cosechas?</summary>
+                <p style="margin-top:10px; font-size:13px; color:#555; line-height:1.7;">
+                    Ve a la sección <strong>Cultivos</strong>.<br>
+                    Primero agrega un <strong>Tipo de Cultivo</strong> (ej: Lechuga, Tomate) si aún no existe.<br>
+                    Luego usa <strong>Registrar Siembra</strong> para crear un cultivo activo.<br>
+                    Cuando coseches, usa <strong>Registrar Cosecha</strong> y selecciona el cultivo correspondiente.<br>
+                    En <strong>Analítica</strong> podrás ver reportes y gráficas de tus cultivos y cosechas.
+                </p>
+            </details>
+
+        </div>
+        <p style="font-size:12px; color:#bbb; margin-top:16px; text-align:center;">Aerogarden Cloud v1.0 · Plataforma de gestión de cultivos inteligentes</p>
+    </div>
+
+    
+    <div class="card" style="margin-top:12px;">
+        <h3 data-i18n="perfil_miembros">👥 Miembros y Accesos</h3>
+        <p style="font-size:13px; color:#888; margin-bottom:14px;">
+            Invita a otros usuarios para que vean o controlen tus dispositivos.
+        </p>
+
+        
+        <label style="font-weight:600;" data-i18n="modal_dispositivo">Dispositivo</label>
+        <select id="select-miembros-dispositivo" onchange="cargarMiembros()"
+                style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd;
+                       font-size:14px; margin-top:6px; margin-bottom:16px;">
+            <option value="">Cargando...</option>
+        </select>
+
+        
+        <div style="display:grid; grid-template-columns:1fr auto auto; gap:10px; align-items:end; flex-wrap:wrap;">
+            <div>
+                <label data-i18n="miembro_correo">Correo del usuario a invitar</label>
+                <input type="email" id="input-correo-invitado" placeholder="correo@ejemplo.com"
+                       style="margin-top:4px;">
+            </div>
+            <div>
+                <label data-i18n="miembro_permiso">Permiso</label>
+                <select id="select-permiso-invitado"
+                        style="padding:10px; border-radius:8px; border:1px solid #ddd;
+                               font-size:14px; margin-top:4px; width:130px;">
+                    <option value="ver" data-i18n="miembro_solo_ver">👁 Solo ver</option>
+                    <option value="controlar" data-i18n="miembro_controlar">🎮 Controlar</option>
+                </select>
+            </div>
+            <button onclick="invitarMiembro()" class="btn-verde" style="height:42px; white-space:nowrap;">
+                <span data-i18n="miembro_invitar">+ Invitar</span>
+            </button>
+        </div>
+
+        
+        <div id="lista-miembros" style="margin-top:18px;">
+            <p style="color:#aaa; font-size:13px;">Selecciona un dispositivo para ver sus miembros.</p>
+        </div>
+
+        
+        <div style="margin-top:24px; border-top:1px solid #eee; padding-top:16px;">
+            <h4 style="margin-bottom:10px; color:#555;" data-i18n="miembro_compartidos">📲 Dispositivos compartidos contigo</h4>
+            <div id="lista-accesos-propios">
+                <p style="color:#aaa; font-size:13px;">Cargando...</p>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+
+<div id="seccion-wifi" class="seccion">
+    <h1 data-i18n="wifi_titulo">📶 Configuración de Red WiFi</h1>
+    <p style="color:#666; margin-bottom:20px;">
+        <span data-i18n="wifi_descripcion">Desde aquí puedes cambiar la red WiFi a la que se conecta el Arduino/ESP32.</span>
+    </p>
+
+    
+    <div class="card" style="margin-bottom:16px;">
+        <label style="font-weight:600;" data-i18n="wifi_dispositivo">🔌 Dispositivo a configurar</label>
+        <select id="select-wifi-dispositivo" onchange="cambiarDispositivoWifi()"
+                style="margin-top:8px; width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; font-size:14px;">
+            <option value="">Cargando dispositivos...</option>
+        </select>
+    </div>
+
+    
+    <div class="card" style="margin-bottom:16px;">
+        <h3 data-i18n="wifi_estado_actual">Estado actual del dispositivo</h3>
+        <div style="display:flex; align-items:center; gap:12px; margin-top:10px;">
+            <div id="wifi-estado-icon" style="font-size:28px;">⏳</div>
+            <div>
+                <div style="font-weight:600; font-size:15px;" id="wifi-red-actual" data-i18n="wifi_consultando">Cargando...</div>
+                <div style="font-size:13px; color:#888;" id="wifi-estado-texto">Consultando estado...</div>
+            </div>
+        </div>
+    </div>
+
+    
+    <div class="card">
+        <h3 data-i18n="wifi_cambiar">🔧 Cambiar red WiFi</h3>
+        <p style="font-size:13px; color:#666; margin-bottom:14px;">
+            Ingresa el nombre (SSID) y contraseña de la red a la que quieres conectar el Arduino.
+            El dispositivo recibirá la nueva configuración y se reconectará automáticamente.
+        </p>
+        <label data-i18n="wifi_ssid">Nombre de la red (SSID)</label>
+        <input type="text" id="wifi-ssid" placeholder="Ej: MiCasaWiFi">
+        <label style="margin-top:10px;" data-i18n="wifi_pass">Contraseña</label>
+        <div style="position:relative;">
+            <input type="password" id="wifi-pass" placeholder="Contraseña de la red" style="padding-right:44px;">
+            <button onclick="toggleVerPass()" style="
+                position:absolute; right:10px; top:50%; transform:translateY(-50%);
+                background:none; border:none; cursor:pointer; font-size:18px;
+            " title="Ver contraseña">👁️</button>
+        </div>
+        <button onclick="enviarRedWifi()" class="btn-verde" style="margin-top:14px; width:100%;">
+            <span data-i18n="wifi_enviar">📡 Enviar al Arduino</span>
+        </button>
+    </div>
+
+    
+    <div class="card" style="margin-bottom:16px;">
+        <h3 data-i18n="wifi_red_arduino">📡 Red actual del Arduino</h3>
+        <div id="wifi-red-arduino" style="margin-top:10px; color:#888; font-size:14px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <span style="font-size:24px;" id="wifi-arduino-icon">⏳</span>
+                <div>
+                    <div style="font-weight:600; font-size:15px;" id="wifi-arduino-ssid">Consultando...</div>
+                    <div style="font-size:12px; color:#aaa;" id="wifi-arduino-fecha"></div>
+                </div>
+                <button onclick="cargarRedActual()" style="margin-left:auto; padding:6px 12px; font-size:12px;" data-i18n="alert_actualizar">↺ Actualizar</button>
+            </div>
+        </div>
+    </div>
+
+    
+    <div class="card" style="margin-top:16px;">
+        <h3 data-i18n="wifi_historial">📋 Últimas redes configuradas</h3>
+        <div id="wifi-historial" style="margin-top:10px; color:#888; font-size:14px;">
+            Cargando historial...
+        </div>
+    </div>
+</div>
+
+
+<div id="modal-dispositivo" class="modal-overlay">
+    <div class="modal">
+        <h3 data-i18n="modal_agregar_disp">Agregar Dispositivo</h3>
+        <label data-i18n="modal_nombre">Nombre</label>
+        <input type="text" id="nombreDispositivo" placeholder="Ej: Controlador Invernadero 1">
+        <label data-i18n="modal_tipo_ctrl">Tipo de controlador</label>
+        <select id="tipoControlador">
+            <option value="ESP32">ESP32</option>
+            <option value="ESP8266">ESP8266</option>
+        </select>
+        <label data-i18n="modal_conexion">Conexión</label>
+        <select id="tipoConexion">
+            <option value="WiFi">WiFi</option>
+            <option value="Ethernet">Ethernet</option>
+        </select>
+        <div class="modal-botones">
+            <button onclick="guardarDispositivo()" data-i18n="modal_guardar">Guardar</button>
+            <button onclick="cerrarModal('modal-dispositivo'" data-i18n="modal_cancelar">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+
+<div id="modal-sensor" class="modal-overlay">
+    <div class="modal">
+        <h3 data-i18n="modal_agregar_sensor">Agregar / Configurar Sensor</h3>
+        <label data-i18n="modal_dispositivo">Dispositivo</label>
+        <select id="selectDispositivoVinculado"></select>
+        <label data-i18n="modal_tipo_sensor">Tipo de sensor</label>
+        <select id="tipoSensor" onchange="actualizarUnidadSegunTipo()">
+            <option value="temperatura">Temperatura</option>
+            <option value="humedad">Humedad</option>
+            <option value="ph">pH</option>
+            <option value="ec">EC</option>
+            <option value="co2">CO2</option>
+            <option value="luz">Luz</option>
+            <option value="distancia">Distancia (Ultrasónico)</option>
+            <option value="nivel agua">Nivel de Agua</option>
+            <option value="presion">Presión</option>
+            <option value="caudal">Caudal</option>
+        </select>
+        <label data-i18n="modal_unidad">Unidad de medida</label>
+        <select id="unidadMedida">
+            <option value="°C">°C (Temperatura)</option>
+            <option value="%">% (Humedad)</option>
+            <option value="pH">pH</option>
+            <option value="mS/cm">mS/cm (EC)</option>
+            <option value="ppm">ppm (CO2)</option>
+            <option value="lux">lux (Luz)</option>
+            <option value="cm">cm (Distancia / Nivel)</option>
+            <option value="hPa">hPa (Presión)</option>
+            <option value="L/min">L/min (Caudal)</option>
+        </select>
+        <div class="modal-botones">
+            <button onclick="guardarSensor()" data-i18n="modal_guardar_sensor">Guardar sensor</button>
+            <button onclick="cerrarModal('modal-sensor')" data-i18n="modal_cancelar">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+
+<div id="modal-editar-sensor" class="modal-overlay" style="display:none;">
+    <div class="modal">
+        <h3 data-i18n="modal_editar_sensor">✏️ Editar Sensor</h3>
+        <input type="hidden" id="editSensorId">
+        <input type="hidden" id="editSensorIdDispositivo">
+        <label data-i18n="modal_tipo_sensor">Tipo de sensor</label>
+        <select id="editTipoSensor">
+            <option value="temperatura">Temperatura</option>
+            <option value="humedad">Humedad</option>
+            <option value="ph">pH</option>
+            <option value="ec">EC</option>
+            <option value="co2">CO2</option>
+            <option value="luz">Luz</option>
+            <option value="distancia">Distancia (Ultrasónico)</option>
+            <option value="nivel agua">Nivel de Agua</option>
+            <option value="presion">Presión</option>
+            <option value="caudal">Caudal</option>
+        </select>
+        <label data-i18n="modal_unidad">Unidad de medida</label>
+        <select id="editUnidadMedida">
+            <option value="°C">°C (Temperatura)</option>
+            <option value="%">% (Humedad)</option>
+            <option value="pH">pH</option>
+            <option value="mS/cm">mS/cm (EC)</option>
+            <option value="ppm">ppm (CO2)</option>
+            <option value="lux">lux (Luz)</option>
+            <option value="cm">cm (Distancia / Nivel)</option>
+            <option value="hPa">hPa (Presión)</option>
+            <option value="L/min">L/min (Caudal)</option>
+        </select>
+        <div class="modal-botones">
+            <button onclick="guardarEditarSensor()" data-i18n="modal_guardar_cambios">Guardar cambios</button>
+            <button onclick="document.getElementById('modal-editar-sensor').style.display='none'" data-i18n="modal_cancelar">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+
+<div id="modal-tipo-cultivo" class="modal-overlay">
+    <div class="modal">
+        <h3 data-i18n="modal_tipo_planta">Registrar Nuevo Tipo de Planta</h3>
+        <label data-i18n="modal_nombre_planta">Nombre de la planta</label>
+        <input type="text" id="nombrePlanta" placeholder="Ej: Tomate Cherry">
+        <label data-i18n="modal_desc_planta">Descripción</label>
+        <input type="text" id="descPlanta" placeholder="Breve descripción">
+        <div class="modal-botones">
+            <button onclick="guardarTipoCultivo()" data-i18n="modal_guardar_planta">Guardar Planta</button>
+            <button onclick="cerrarModal('modal-tipo-cultivo')" data-i18n="modal_cancelar">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+
+<div id="modal-siembra" class="modal-overlay">
+    <div class="modal">
+        <h3 data-i18n="modal_siembra">Registrar Siembra</h3>
+        <label data-i18n="modal_nombre_var">Nombre / Variedad</label>
+        <input type="text" id="nombreCultivo" placeholder="Ej: Lechuga Romana">
+        <label data-i18n="modal_tipo_cultivo">Tipo de Cultivo</label>
+        <select id="selectTipoCultivo"></select>
+        <label data-i18n="modal_fecha_siembra">Fecha de siembra</label>
+        <input type="date" id="fechaSiembra">
+        <label data-i18n="modal_cantidad">Cantidad de plantas</label>
+        <input type="number" id="cantidadPlantas" placeholder="Ej: 50">
+        <div class="modal-botones">
+            <button onclick="guardarSiembra()" data-i18n="modal_guardar_siembra">Guardar Siembra</button>
+            <button onclick="cerrarModal('modal-siembra')" data-i18n="modal_cancelar">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+
+<div id="modal-cultivo" class="modal-overlay">
+    <div class="modal modal-wide">
+        <h3>📊 Visualizar Información</h3>
+        <div class="tabs">
+            <button class="tab-btn activo" onclick="cambiarTab('tab-cultivos', this)" data-i18n="cult_tab_cultivos">🌱 Cultivos</button>
+            <button class="tab-btn" onclick="cambiarTab('tab-cosechas', this)" data-i18n="cult_tab_cosechas">🌾 Cosechas</button>
+        </div>
+        <div id="tab-cultivos" class="tab-contenido activo">
+            <div id="tabla-cultivos-modal"><p style="color:#888;">Cargando...</p></div>
+        </div>
+        <div id="tab-cosechas" class="tab-contenido">
+            <div id="tabla-cosechas-modal"><p style="color:#888;">Cargando...</p></div>
+        </div>
+        <div class="modal-botones" style="margin-top:16px;">
+            <button onclick="cerrarModal('modal-cultivo')">Cerrar</button>
+        </div>
+    </div>
+</div>
+
+
+<div id="modal-cosecha" class="modal-overlay">
+    <div class="modal">
+        <h3 data-i18n="modal_cosecha">Registrar Cosecha</h3>
+        <label data-i18n="modal_cultivo">Cultivo</label>
+        <select id="selectCultivoCosecha"></select>
+        <label data-i18n="modal_fecha_cosecha">Fecha de cosecha</label>
+        <input type="date" id="fechaCosecha">
+        <label data-i18n="modal_cantidad_cos">Cantidad cosechada</label>
+        <input type="number" id="cantidadCosechada" placeholder="Ej: 30">
+        <label data-i18n="modal_calidad">Calidad</label>
+        <input type="text" id="calidadCosecha" placeholder="Ej: Excelente"
+               oninput="validarTextoSoloLetras(this)" maxlength="20">
+        <label data-i18n="modal_observaciones">Observaciones</label>
+        <textarea id="observacionesCosecha" rows="4" maxlength="500"
+                  placeholder="Escribe aquí las observaciones..."></textarea>
+        <div class="modal-botones">
+            <button onclick="guardarCosecha()" data-i18n="modal_guardar_cosecha">Guardar Cosecha</button>
+            <button onclick="cerrarModal('modal-cosecha')">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+
+<div id="modal-parametro" class="modal-overlay">
+    <div class="modal">
+        <h3 id="titulo-modal-parametro">Nuevo Parámetro de Alerta</h3>
+        <input type="hidden" id="editParamId">
+        <label>Sensor</label>
+        <select id="selectSensorParametro"></select>
+        <label>Nombre del parámetro</label>
+        <input type="text" id="paramNombre" placeholder="Ej: Temperatura Alta">
+        <label>Condición</label>
+        <select id="paramCondicion">
+            <option value="mayor_que">Mayor que ( &gt; )</option>
+            <option value="menor_que">Menor que ( &lt; )</option>
+            <option value="igual_a">Igual a ( = )</option>
+        </select>
+        <label>Valor umbral</label>
+        <input type="number" step="0.01" id="paramUmbral" placeholder="Ej: 30">
+        <label>Prioridad</label>
+        <select id="paramPrioridad">
+            <option value="baja">🟢 Baja</option>
+            <option value="media">🟡 Media</option>
+            <option value="alta">🟠 Alta</option>
+            <option value="critica">🔴 Crítica</option>
+        </select>
+        <label>Estado</label>
+        <select id="paramActivo">
+            <option value="1">Activo</option>
+            <option value="0">Inactivo</option>
+        </select>
+        <div class="modal-botones">
+            <button onclick="guardarParametro()">Guardar</button>
+            <button onclick="cerrarModal('modal-parametro')">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+
+<div id="modal-detalle-alerta" class="modal-overlay">
+    <div class="modal">
+        <h3>🔔 Detalle de Alerta</h3>
+        <div id="contenido-detalle-alerta" style="font-size:14px; line-height:1.8;"></div>
+        <div class="modal-botones" style="margin-top:16px; flex-wrap:wrap;">
+            <button class="btn-naranja btn-sm" id="btn-marcar-vista">✓ Marcar como Vista</button>
+            <button class="btn-verde btn-sm" id="btn-marcar-resuelta">✔ Marcar como Resuelta</button>
+            <button onclick="cerrarModal('modal-detalle-alerta')">Cerrar</button>
+        </div>
+    </div>
+</div>
+
+
+<div id="modal-editar-cultivo" class="modal-overlay">
+    <div class="modal">
+        <h3>✏️ Editar Cultivo</h3>
+        <input type="hidden" id="editCultivoId">
+        <label data-i18n="modal_nombre_var">Nombre / Variedad</label>
+        <input type="text" id="editNombreCultivo" placeholder="Ej: Lechuga Romana">
+        <label>Tipo de Cultivo</label>
+        <select id="editTipoCultivo"></select>
+        <label>Fecha de siembra</label>
+        <input type="date" id="editFechaSiembra">
+        <label>Cantidad de plantas</label>
+        <input type="number" id="editCantidadPlantas" placeholder="Ej: 50">
+        <div class="modal-botones">
+            <button class="btn-verde" onclick="guardarEdicionCultivo()">Guardar cambios</button>
+            <button onclick="cerrarModal('modal-editar-cultivo')">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<div id="modal-editar-cosecha" class="modal-overlay">
+    <div class="modal">
+        <h3>✏️ Editar Cosecha</h3>
+        <input type="hidden" id="editCosechaId">
+        <label data-i18n="modal_fecha_cosecha">Fecha de cosecha</label>
+        <input type="date" id="editFechaCosecha">
+        <label data-i18n="modal_cantidad_cos">Cantidad cosechada</label>
+        <input type="number" id="editCantidadCosecha" placeholder="Ej: 30">
+        <label data-i18n="modal_calidad">Calidad</label>
+        <input type="text" id="editCalidadCosecha" placeholder="Ej: Excelente" maxlength="20">
+        <label data-i18n="modal_observaciones">Observaciones</label>
+        <textarea id="editObservacionesCosecha" rows="3" maxlength="500" placeholder="Observaciones..."></textarea>
+        <div class="modal-botones">
+            <button class="btn-verde" onclick="guardarEdicionCosecha()">Guardar cambios</button>
+            <button onclick="cerrarModal('modal-editar-cosecha')">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ================================================================
+//  CONTROL BOMBA / RELEVADOR — integrado en dashboard.html
+// ================================================================
+
+let ID_SENSOR_NIVEL = null; // se detecta automáticamente según el dispositivo seleccionado
+const UMBRAL_NIVEL_BAJO_CM = 20; // distancia > 20 cm = poco agua en el depósito
+
+async function cargarSeccionRelevador() {
+    if (!dispositivoActualId) {
+        await cargarDispositivosGlobal();
+    }
+    // Sincronizar el select de bomba con el dispositivo actual
+    const sel = document.getElementById('select-bomba-dispositivo');
+    if (sel && dispositivoActualId) sel.value = dispositivoActualId;
+
+    try {
+        const res  = await fetch("/api/relevador/config?device_id=" + dispositivoActualId);
+        const data = await res.json();
+        document.getElementById("input-tiempo-on").value  = data.tiempo_on  || 30;
+        document.getElementById("input-tiempo-off").value = data.tiempo_off || 60;
+        actualizarPreviewBomba();
+        actualizarIndicadorBomba(data.modo, data.estado_manual);
+        actualizarNivelAgua();
+    } catch(e) { console.error("Error cargando relevador:", e); }
+}
+
+async function guardarConfigBomba() {
+    if (!dispositivoActualId) { alert('Selecciona un dispositivo primero'); return; }
+    const on  = parseInt(document.getElementById("input-tiempo-on").value)  || 30;
+    const off = parseInt(document.getElementById("input-tiempo-off").value) || 60;
+    try {
+        await fetch("/api/relevador/config", {
+            method:  "POST",
+            headers: {"Content-Type": "application/json"},
+            body:    JSON.stringify({ device_id: dispositivoActualId, tiempo_on: on, tiempo_off: off, modo: "automatico" })
+        });
+        const msg = document.getElementById("msg-config-bomba");
+        msg.style.display = "inline";
+        setTimeout(() => msg.style.display = "none", 2500);
+        actualizarIndicadorBomba("automatico", "apagado");
+    } catch(e) { alert("Error al guardar: " + e); }
+}
+
+async function controlManualBomba(estado) {
+    if (!dispositivoActualId) { alert('Selecciona un dispositivo primero'); return; }
+    const on  = parseInt(document.getElementById("input-tiempo-on").value)  || 30;
+    const off = parseInt(document.getElementById("input-tiempo-off").value) || 60;
+    try {
+        await fetch("/api/relevador/config", {
+            method:  "POST",
+            headers: {"Content-Type": "application/json"},
+            body:    JSON.stringify({ device_id: dispositivoActualId, modo: "manual", estado_manual: estado, tiempo_on: on, tiempo_off: off })
+        });
+        actualizarIndicadorBomba("manual", estado);
+    } catch(e) { alert("Error: " + e); }
+}
+
+function actualizarIndicadorBomba(modo, estadoManual) {
+    const ind  = document.getElementById("indicador-bomba");
+    const txtE = document.getElementById("texto-estado-bomba");
+    const txtM = document.getElementById("texto-modo-bomba");
+    if (!ind) return;
+    const enc = (modo === "manual" && estadoManual === "encendido");
+    ind.style.background = enc ? "#27ae60" : "#95a5a6";
+    ind.style.boxShadow  = enc
+        ? "0 0 0 6px #e8f5e9, 0 0 20px rgba(39,174,96,0.4)"
+        : "0 0 0 6px #ecf0f1";
+    txtE.textContent = enc ? "Estado: ENCENDIDA 🟢" : "Estado: APAGADA ⚫";
+    txtM.textContent = modo === "manual" ? "Modo: Manual" : "Modo: Automático (temporizador)";
+}
+
+function actualizarPreviewBomba() {
+    const on  = parseInt(document.getElementById("input-tiempo-on").value)  || 0;
+    const off = parseInt(document.getElementById("input-tiempo-off").value) || 0;
+    document.getElementById("preview-on").textContent  = fmtSeg(on);
+    document.getElementById("preview-off").textContent = fmtSeg(off);
+}
+
+function fmtSeg(s) {
+    if (s < 60)   return "= " + s + " seg";
+    if (s < 3600) return "= " + Math.floor(s/60) + " min " + (s%60) + " seg";
+    return "= " + Math.floor(s/3600) + " h " + Math.floor((s%3600)/60) + " min";
+}
+
+async function actualizarNivelAgua() {
+    try {
+        // Si no tenemos el id del sensor, buscarlo automáticamente
+        if (!ID_SENSOR_NIVEL && dispositivoActualId) {
+            const resSensores = await fetch('/api/sensores/lista');
+            const sensores    = await resSensores.json();
+            const sensorNivel = sensores.find(s =>
+                s.idDispositivo == dispositivoActualId &&
+                (s.tipo_sensor.toLowerCase().includes('distancia') ||
+                 s.tipo_sensor.toLowerCase().includes('nivel'))
+            );
+            if (sensorNivel) ID_SENSOR_NIVEL = sensorNivel.idSensore;
+        }
+
+        if (!ID_SENSOR_NIVEL) return;
+
+        const res  = await fetch("/api/sensores/datos-actuales/" + ID_SENSOR_NIVEL);
+        const data = await res.json();
+        if (data.error) return;
+        const cm      = parseFloat(data.valor);
+        const display = document.getElementById("display-nivel-agua");
+        const fecha   = document.getElementById("fecha-nivel-agua");
+        const alerta  = document.getElementById("alerta-nivel-bajo");
+        if (display) display.textContent = cm.toFixed(1) + " cm";
+        if (fecha)   fecha.textContent   = "Última lectura: " + data.fecha_hora;
+        if (alerta)  alerta.style.display = (cm > UMBRAL_NIVEL_BAJO_CM) ? "block" : "none";
+    } catch(e) { console.error("Error nivel agua:", e); }
+}
+
+// Refrescar nivel de agua cada 10s si la sección está visible
+setInterval(() => {
+    const sec = document.getElementById("seccion-relevador");
+    if (sec && sec.style.display !== "none") actualizarNivelAgua();
+}, 10000);
+</script>
+
+<script>
+// Interceptar mostrarSeccion para marcar nav activo
+(function() {
+    // Mapa seccion -> indice del boton en el nav
+    const seccionABtn = {
+        'dashboard-contenido': 0,
+        'seccion-hardware': 1,
+        'seccion-logica': 2,
+        'seccion-analitica': 3,
+        'seccion-cultivos': 4,
+        'seccion-alertas': 5,
+        'seccion-relevador': 6,
+        'seccion-wifi': 7,
+        'seccion-configuracion': 8,
+    };
+
+    function marcarNavActivo(seccionId) {
+        const btns = document.querySelectorAll('nav button');
+        btns.forEach(b => b.classList.remove('nav-btn-activo'));
+        const idx = seccionABtn[seccionId];
+        if (idx !== undefined && btns[idx]) {
+            btns[idx].classList.add('nav-btn-activo');
+        }
+    }
+
+    // Esperar a que dashboard.js cargue y sobreescribir mostrarSeccion
+    window.addEventListener('load', function() {
+        const originalMostrar = window.mostrarSeccion;
+        if (typeof originalMostrar === 'function') {
+            window.mostrarSeccion = function(id) {
+                originalMostrar(id);
+                marcarNavActivo(id);
+            };
+        }
+        // Marcar inicio por defecto
+        marcarNavActivo('dashboard-contenido');
+    });
+})();
+</script>
+<script src="{{ url_for('static', filename='js/i18n.js') }}"></script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+<script>
+function cambiarIdiomaApp(lang) {
+    setIdioma(lang);
+    const msg = document.getElementById('msg-idioma');
+    if (msg) { msg.style.display = 'inline'; setTimeout(() => msg.style.display = 'none', 2000); }
+}
+</script>
+<script>
+// Auto-selecciona la unidad según el tipo de sensor elegido
+function actualizarUnidadSegunTipo() {
+    const tipo = document.getElementById('tipoSensor').value;
+    const unidad = document.getElementById('unidadMedida');
+    const mapa = {
+        'temperatura': '°C',
+        'humedad':     '%',
+        'ph':          'pH',
+        'ec':          'mS/cm',
+        'co2':         'ppm',
+        'luz':         'lux',
+        'distancia':   'cm',
+        'nivel agua':  'cm',
+        'presion':     'hPa',
+        'caudal':      'L/min',
+    };
+    if (mapa[tipo] && unidad) {
+        unidad.value = mapa[tipo];
+    }
+}
+</script>
+</body>
+</html>
