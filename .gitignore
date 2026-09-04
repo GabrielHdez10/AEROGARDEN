@@ -34,3 +34,5 @@ htmlcov/
 *.db
 *.sqlite
 *.sqlite3
+# Credenciales del firmware
+Firmware/**/secrets.h

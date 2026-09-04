@@ -1,25 +1,7 @@
 #include <DHT.h>
 #include <EEPROM.h>
-
-#define PAIRING_CODE   "HIDRO-XXXX"          
-#define ARDUINO_TOKEN  "hidro_token_secreto_2024"
-#define SERVER_HOST    "web-production-4a25c.up.railway.app"
-// ─────────────────────────────────────────────────────────────
-
-// ── Pines sensores ────────────────────────────────────────────
-#define DHTPIN      8
-#define DHTTYPE     DHT22
-#define TRIG_PIN    53
-#define ECHO_PIN    51
-#define RELAY_PIN   2
-#define PH_PIN      A0
-#define LUZ_PIN     A1
-// ─────────────────────────────────────────────────────────────
-
-// ── EEPROM ────────────────────────────────────────────────────
-#define EEPROM_ADDR       0
-#define EEPROM_MAGIC_ADDR 10
-#define EEPROM_MAGIC      0xAB
+#include "config.h"
+#include "secrets.h"
 // ─────────────────────────────────────────────────────────────
 
 DHT dht(DHTPIN, DHTTYPE);
@@ -27,15 +9,14 @@ DHT dht(DHTPIN, DHTTYPE);
 int deviceId = -1;
 
 // ── Config relay (se actualiza desde el servidor) ─────────────
-int  tiempoOn      = 30;
-int  tiempoOff     = 60;
+int  tiempoOn      = RIEGO_ON_DEFAULT;
+int  tiempoOff     = RIEGO_OFF_DEFAULT;
 bool modoManual    = false;
 bool estadoManual  = false;
 bool bombaEncendida = false;
 unsigned long tCambioRelay = 0;
 // ─────────────────────────────────────────────────────────────
 
-#define INTERVALO_DATOS 10000UL
 unsigned long ultimoCiclo = 0;
 
 // ================================================================
@@ -59,7 +40,7 @@ void guardarDeviceIdEEPROM(int id) {
 // El Mega envía comandos por Serial1, el ESP32 responde con JSON
 // ================================================================
 
-String enviarAlESP32(String cmd, int timeoutMs = 8000) {
+String enviarAlESP32(String cmd, int timeoutMs = TIMEOUT_ESP) {
     // Limpiar buffer
     while (Serial1.available()) Serial1.read();
 
@@ -108,14 +89,14 @@ int emparejar() {
 // ENVÍO DE DATOS
 // ================================================================
 void enviarDatos(float temp, float humedad, float dist) {
-    
+
     int luz = 0;
-    for (int i = 0; i < 10; i++) { luz += analogRead(LUZ_PIN); delay(10); }
-    luz = luz / 10;
+    for (int i = 0; i < MUESTRAS_ANALOG; i++) { luz += analogRead(LUZ_PIN); delay(DELAY_MUESTRA); }
+    luz = luz / MUESTRAS_ANALOG;
 
     int ph = 0;
-    for (int i = 0; i < 10; i++) { ph += analogRead(PH_PIN); delay(10); }
-    ph = ph / 10;
+    for (int i = 0; i < MUESTRAS_ANALOG; i++) { ph += analogRead(PH_PIN); delay(DELAY_MUESTRA); }
+    ph = ph / MUESTRAS_ANALOG;
 
     String body = "{\"token\":\"" + String(ARDUINO_TOKEN) + "\","
                   "\"device_id\":" + String(deviceId) + ","
@@ -139,7 +120,7 @@ void pedirConfig() {
     String url = "/api/arduino/config?token=" + String(ARDUINO_TOKEN)
                  + "&device_id=" + String(deviceId);
     String cmd = "GET:" + url;
-    String r = enviarAlESP32(cmd, 8000);
+    String r = enviarAlESP32(cmd, TIMEOUT_ESP);
     Serial.print(F("Config: ")); Serial.println(r);
 
     if (r.length() == 0) return;
@@ -176,19 +157,19 @@ void pedirConfig() {
 // ================================================================
 void controlarRelay() {
     if (modoManual) {
-        digitalWrite(RELAY_PIN, estadoManual ? LOW : HIGH);
+        digitalWrite(RELAY_PIN, estadoManual ? RELAY_ON : RELAY_OFF);
         bombaEncendida = estadoManual;
         return;
     }
     unsigned long ahora = millis();
     if (bombaEncendida && ahora - tCambioRelay >= (unsigned long)tiempoOn * 1000UL) {
         bombaEncendida = false;
-        digitalWrite(RELAY_PIN, HIGH);
+        digitalWrite(RELAY_PIN, RELAY_OFF);
         tCambioRelay = ahora;
         Serial.println(F("Bomba OFF (auto)"));
     } else if (!bombaEncendida && ahora - tCambioRelay >= (unsigned long)tiempoOff * 1000UL) {
         bombaEncendida = true;
-        digitalWrite(RELAY_PIN, LOW);
+        digitalWrite(RELAY_PIN, RELAY_ON);
         tCambioRelay = ahora;
         Serial.println(F("Bomba ON (auto)"));
     }
@@ -208,20 +189,20 @@ float leerUltrasonico() {
 // SETUP
 // ================================================================
 void setup() {
-    Serial.begin(9600);
-    Serial1.begin(115200);   // comunicación con ESP32
+    Serial.begin(BAUD_DEBUG);
+    Serial1.begin(BAUD_ESP);   // comunicación con ESP32
 
     dht.begin();
     pinMode(TRIG_PIN, OUTPUT);
     pinMode(ECHO_PIN, INPUT);
     pinMode(RELAY_PIN, OUTPUT);
-    digitalWrite(RELAY_PIN, HIGH); // relay apagado al inicio
+    digitalWrite(RELAY_PIN, RELAY_OFF); // relay apagado al inicio
 
     Serial.println(F("=== Iniciando sistema ==="));
     Serial.println(F("Esperando que el ESP32 conecte al WiFi..."));
 
     // Dar tiempo al ESP32 para conectarse al WiFi
-    delay(6000);
+    delay(ESPERA_ARRANQUE);
 
     // Intentar leer device_id guardado en EEPROM
     deviceId = leerDeviceIdEEPROM();

@@ -83,4 +83,22 @@ aerogarden/
     ├── login.html          # Página de login
     └── registro.html       # Página de registro
 ```
+## Antes de compilar
 
+El sketch del Mega requiere un archivo `secrets.h` que no está en el
+repositorio, porque contiene credenciales.
+
+Para crearlo, copia la plantilla dentro de `sketch_hidroponia_MEGA/`:
+
+    Copy-Item secrets.example.h secrets.h
+
+Y llena los tres valores:
+
+- `PAIRING_CODE` — lo genera la interfaz web al registrar un dispositivo
+- `ARDUINO_TOKEN` — debe coincidir con el del archivo `.env` del backend
+- `SERVER_HOST` — dominio del servidor, sin `https://` al inicio
+
+Sin este archivo el sketch no compila.
+
+La configuración de pines y tiempos está en `config.h`, que sí forma
+parte del repositorio.
