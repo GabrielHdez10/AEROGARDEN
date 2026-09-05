@@ -1,6 +1,7 @@
 from flask import Flask, jsonify, request, render_template, session, redirect, url_for
 from functools import wraps
 from flask_cors import CORS
+from dotenv import load_dotenv
 import mysql.connector
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
@@ -8,6 +9,8 @@ import threading
 import os
 import random
 import string
+
+load_dotenv()
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 CORS(app)
@@ -1618,3 +1621,4 @@ if __name__ == '__main__':
         host='0.0.0.0',
         port=int(os.environ.get('PORT', 5000))
     )
+
