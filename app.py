@@ -93,8 +93,10 @@ def crear_codigo_verificacion(cursor, correo, proposito):
     return codigo
 
 
+DB_SSL_CA = os.environ.get("DB_SSL_CA", "").strip()
+
 def conectar_bd():
-    return mysql.connector.connect(
+    config = dict(
         host=os.environ.get("DB_HOST", "127.0.0.1"),
         port=int(os.environ.get("DB_PORT", "3306")),
         user=os.environ.get("DB_USER", "root"),
@@ -102,6 +104,10 @@ def conectar_bd():
         database=os.environ.get("DB_NAME", "mydb"),
         charset="utf8mb4"
     )
+    if DB_SSL_CA:
+        config["ssl_ca"] = DB_SSL_CA
+        config["ssl_verify_cert"] = True
+    return mysql.connector.connect(**config)
 
 
 def login_requerido(f):
