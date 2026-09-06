@@ -11,6 +11,7 @@ import random
 import string
 import smtplib
 from email.mime.text import MIMEText
+import tempfile
 
 load_dotenv()
 
@@ -18,6 +19,41 @@ app = Flask(__name__, static_folder='static', template_folder='templates')
 CORS(app)
 
 app.secret_key = os.environ.get("SECRET_KEY", "ag_s3cr3t_2024_xK9")
+
+# ── Certificado SSL para bases de datos en la nube (Aiven, PlanetScale, etc.) ──
+# Ruta portable: por defecto busca certs/aiven-ca.pem DENTRO del proyecto,
+# así funciona igual en cualquier máquina sin rutas absolutas hardcodeadas.
+# Se puede sobreescribir con DB_SSL_CA en el .env si alguien quiere otra ubicación.
+BASEDIR             = os.path.dirname(os.path.abspath(__file__))
+DEFAULT_SSL_CA_PATH = os.path.join(BASEDIR, "certs", "aiven-ca.pem")
+_DB_SSL_CA_ORIGEN   = os.environ.get("DB_SSL_CA", "").strip() or (
+    DEFAULT_SSL_CA_PATH if os.path.exists(DEFAULT_SSL_CA_PATH) else ""
+)
+
+
+def _preparar_certificado_ssl(ruta_original):
+    """
+    Copia el certificado a la carpeta temporal del sistema (fuera de
+    OneDrive/Google Drive) y usa esa copia. Carpetas sincronizadas a veces
+    bloquean el archivo original de forma intermitente (funciona una vez,
+    falla la siguiente) mientras el cliente de sincronización lo toca;
+    la copia local evita ese problema.
+    """
+    if not ruta_original or not os.path.exists(ruta_original):
+        return ""
+    try:
+        destino = os.path.join(tempfile.gettempdir(), "aerogarden_aiven_ca.pem")
+        with open(ruta_original, "rb") as f_origen:
+            contenido = f_origen.read()
+        with open(destino, "wb") as f_destino:
+            f_destino.write(contenido)
+        return destino
+    except Exception as e:
+        print("⚠️ No se pudo copiar el certificado SSL a una ruta temporal, usando el original:", e)
+        return ruta_original
+
+
+DB_SSL_CA = _preparar_certificado_ssl(_DB_SSL_CA_ORIGEN)
 
 # ── Configuración de correo (SMTP genérico: Brevo, SendGrid, etc.) ──
 EMAIL_HOST          = os.environ.get("EMAIL_HOST", "smtp-relay.brevo.com")
@@ -92,8 +128,6 @@ def crear_codigo_verificacion(cursor, correo, proposito):
     )
     return codigo
 
-
-DB_SSL_CA = os.environ.get("DB_SSL_CA", "").strip()
 
 def conectar_bd():
     config = dict(

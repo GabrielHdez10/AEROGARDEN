@@ -3,6 +3,11 @@
 .env.*
 !.env.example
 
+# Certificados SSL de bases de datos en la nube (Aiven, PlanetScale, etc.)
+# Cada quien descarga el suyo desde su propio panel; no se comparte por git.
+certs/*.pem
+!certs/.gitkeep
+
 # Python
 __pycache__/
 *.py[cod]
