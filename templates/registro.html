@@ -359,6 +359,7 @@
                 <span id="msg-texto"></span>
             </div>
 
+            <div id="paso-datos">
             <div class="campo">
                 <label for="nombre">Nombre(s)</label>
                 <div class="input-wrap">
@@ -459,6 +460,28 @@
             <button class="btn-registro" id="btnRegistro" onclick="enviarRegistro()" data-i18n="reg_btn">Crear mi cuenta</button>
 
             <p class="pie"><span data-i18n="reg_ya_cuenta">¿Ya tienes cuenta?</span> <a href="/" data-i18n="reg_iniciar">Inicia sesión</a></p>
+            </div><!-- fin paso-datos -->
+
+            <!-- Paso 2: código de verificación enviado por correo -->
+            <div id="paso-codigo" style="display:none;">
+                <h2 class="form-titulo">Verifica tu correo</h2>
+                <p class="form-subtitulo">Enviamos un código de 6 dígitos a <strong id="codigo-correo-destino"></strong></p>
+
+                <div class="campo">
+                    <label for="codigo-verificacion">Código de verificación</label>
+                    <div class="input-wrap">
+                        <input type="text" id="codigo-verificacion" placeholder="000000" maxlength="6" inputmode="numeric" autocomplete="one-time-code">
+                    </div>
+                </div>
+
+                <button class="btn-registro" id="btnVerificarCodigo" onclick="verificarCodigoRegistro()">Verificar y entrar</button>
+
+                <p class="pie">
+                    <button type="button" class="link-recuperar" id="btnReenviarCodigo" onclick="reenviarCodigoRegistro()" style="background:none;border:none;cursor:pointer;color:inherit;text-decoration:underline;">
+                        Reenviar código
+                    </button>
+                </p>
+            </div><!-- fin paso-codigo -->
         </div>
     </div>
 
@@ -527,7 +550,13 @@
                 });
                 const data = await res.json();
 
-                if (res.ok && data.status === 'success') {
+                if (res.ok && data.status === 'success' && data.requiere_verificacion) {
+                    mostrarMsg('exito', '✅', data.mensaje || 'Cuenta creada. Revisa tu correo.');
+                    document.getElementById('codigo-correo-destino').textContent = data.correo;
+                    document.getElementById('paso-datos').style.display = 'none';
+                    document.getElementById('paso-codigo').style.display = 'block';
+                    limpiarMsg();
+                } else if (res.ok && data.status === 'success') {
                     mostrarMsg('exito', '✅', '¡Cuenta creada! Redirigiendo al login…');
                     setTimeout(() => window.location.assign('/'), 1800);
                 } else {
@@ -542,8 +571,72 @@
             }
         }
 
+        async function verificarCodigoRegistro() {
+            limpiarMsg();
+            const correo = document.getElementById('correo').value.trim();
+            const codigo = document.getElementById('codigo-verificacion').value.trim();
+
+            if (!codigo) { mostrarMsg('error', '⚠️', 'Ingresa el código que enviamos a tu correo.'); return; }
+
+            const btn = document.getElementById('btnVerificarCodigo');
+            btn.disabled = true;
+            btn.textContent = 'Verificando…';
+
+            try {
+                const res  = await fetch('/api/auth/verificar-codigo', {
+                    method:  'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body:    JSON.stringify({ correo, codigo, proposito: 'registro' })
+                });
+                const data = await res.json();
+
+                if (res.ok && data.status === 'success') {
+                    mostrarMsg('exito', '✅', '¡Correo verificado! Entrando…');
+                    setTimeout(() => window.location.assign('/dashboard'), 1200);
+                } else {
+                    mostrarMsg('error', '⚠️', data.mensaje || 'Código inválido.');
+                    btn.disabled = false;
+                    btn.textContent = 'Verificar y entrar';
+                }
+            } catch {
+                mostrarMsg('error', '⚠️', 'No se pudo conectar con el servidor.');
+                btn.disabled = false;
+                btn.textContent = 'Verificar y entrar';
+            }
+        }
+
+        async function reenviarCodigoRegistro() {
+            limpiarMsg();
+            const correo = document.getElementById('correo').value.trim();
+            const btn = document.getElementById('btnReenviarCodigo');
+            btn.disabled = true;
+
+            try {
+                const res  = await fetch('/api/auth/enviar-codigo', {
+                    method:  'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body:    JSON.stringify({ correo, proposito: 'registro' })
+                });
+                const data = await res.json();
+                mostrarMsg(data.status === 'success' ? 'exito' : 'error',
+                           data.status === 'success' ? '✅' : '⚠️',
+                           data.mensaje);
+            } catch {
+                mostrarMsg('error', '⚠️', 'No se pudo conectar con el servidor.');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
         document.addEventListener('keydown', e => {
-            if (e.key === 'Enter') enviarRegistro();
+            if (e.key === 'Enter') {
+                const codigoPaso = document.getElementById('paso-codigo');
+                if (codigoPaso && codigoPaso.style.display !== 'none') {
+                    verificarCodigoRegistro();
+                } else {
+                    enviarRegistro();
+                }
+            }
         });
     </script>
 </body>

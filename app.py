@@ -9,6 +9,8 @@ import threading
 import os
 import random
 import string
+import smtplib
+from email.mime.text import MIMEText
 
 load_dotenv()
 
@@ -16,6 +18,79 @@ app = Flask(__name__, static_folder='static', template_folder='templates')
 CORS(app)
 
 app.secret_key = os.environ.get("SECRET_KEY", "ag_s3cr3t_2024_xK9")
+
+# ── Configuración de correo (SMTP genérico: Brevo, SendGrid, etc.) ──
+EMAIL_HOST          = os.environ.get("EMAIL_HOST", "smtp-relay.brevo.com")
+EMAIL_PORT          = int(os.environ.get("EMAIL_PORT", "587"))
+EMAIL_USE_TLS       = os.environ.get("EMAIL_USE_TLS", "true").lower() == "true"
+EMAIL_HOST_USER     = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+DEFAULT_FROM_EMAIL  = os.environ.get("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
+CODIGO_EXP_MINUTOS  = int(os.environ.get("CODIGO_EXP_MINUTOS", "15"))
+
+
+def generar_codigo(n=6):
+    return ''.join(random.choices(string.digits, k=n))
+
+
+def enviar_correo_codigo(destino, codigo, proposito):
+    """
+    Envía el código de verificación por correo (registro o restablecimiento).
+    Si no hay credenciales SMTP configuradas, no detiene el flujo: solo lo
+    registra en consola (útil en desarrollo local).
+    """
+    if not EMAIL_HOST_USER or not EMAIL_HOST_PASSWORD:
+        print(f"⚠️ EMAIL_HOST_USER/EMAIL_HOST_PASSWORD no configurados. "
+              f"Código para {destino} ({proposito}): {codigo}")
+        return False
+
+    if proposito == 'reset':
+        asunto = "Restablece tu contraseña - AeroGarden"
+        motivo = "Recibimos una solicitud para restablecer la contraseña de tu cuenta."
+    else:
+        asunto = "Verifica tu correo - AeroGarden"
+        motivo = "Gracias por registrarte en AeroGarden."
+
+    cuerpo = (
+        f"Hola 👋\n\n{motivo}\n\n"
+        f"Tu código de verificación es: {codigo}\n\n"
+        f"Este código vence en {CODIGO_EXP_MINUTOS} minutos.\n\n"
+        f"Si tú no solicitaste esto, ignora este mensaje.\n\n"
+        f"AeroGarden"
+    )
+
+    try:
+        msg = MIMEText(cuerpo, "plain", "utf-8")
+        msg["Subject"] = asunto
+        msg["From"]    = DEFAULT_FROM_EMAIL
+        msg["To"]      = destino
+
+        with smtplib.SMTP(EMAIL_HOST, EMAIL_PORT, timeout=15) as server:
+            if EMAIL_USE_TLS:
+                server.starttls()
+            server.login(EMAIL_HOST_USER, EMAIL_HOST_PASSWORD)
+            server.sendmail(DEFAULT_FROM_EMAIL, [destino], msg.as_string())
+        return True
+    except Exception as e:
+        print("❌ Error enviando correo:", str(e))
+        return False
+
+
+def crear_codigo_verificacion(cursor, correo, proposito):
+    """Invalida códigos previos no usados y crea uno nuevo para (correo, proposito)."""
+    cursor.execute(
+        "UPDATE verificaciones_email SET usado=1 WHERE correo=%s AND proposito=%s AND usado=0",
+        (correo, proposito)
+    )
+    codigo = generar_codigo(6)
+    ahora  = datetime.now()
+    expira = ahora + timedelta(minutes=CODIGO_EXP_MINUTOS)
+    cursor.execute(
+        """INSERT INTO verificaciones_email (correo, codigo, proposito, usado, verificado, creado_en, expira_en)
+           VALUES (%s,%s,%s,0,0,%s,%s)""",
+        (correo, codigo, proposito, ahora, expira)
+    )
+    return codigo
 
 
 def conectar_bd():
@@ -359,7 +434,7 @@ def registrar_usuario():
         nombre             = data.get('nombre', '').strip()
         apellido_paterno   = data.get('apellido_paterno', '').strip()
         apellido_materno   = data.get('apellido_materno', '').strip()
-        correo             = data.get('correo', '').strip()
+        correo             = data.get('correo', '').strip().lower()
         contrasena         = data.get('contrasena')
 
         if not nombre or not apellido_paterno or not apellido_materno or not correo or not contrasena:
@@ -372,9 +447,21 @@ def registrar_usuario():
             (nombre, apellido_paterno, apellido_materno, correo, generate_password_hash(contrasena))
         )
         conexion.commit()
+
+        # Genera y envía el código de verificación de registro
+        codigo = crear_codigo_verificacion(cursor, correo, 'registro')
+        conexion.commit()
         cursor.close()
         conexion.close()
-        return jsonify({"status": "success", "mensaje": "Usuario registrado"})
+
+        enviar_correo_codigo(correo, codigo, 'registro')
+
+        return jsonify({
+            "status": "success",
+            "mensaje": "Cuenta creada. Revisa tu correo para verificarla.",
+            "requiere_verificacion": True,
+            "correo": correo
+        })
     except mysql.connector.Error as err:
         return jsonify({"status": "error", "mensaje": str(err)}), 500
 
@@ -409,7 +496,12 @@ def actualizar_nombre():
 
 @app.route('/api/auth/verificar-correo', methods=['POST'])
 def verificar_correo():
-    """Verifica si un correo existe en la BD (para recuperar contraseña)."""
+    """
+    Paso 1 de 'olvidé mi contraseña': confirma que el correo existe y,
+    si es así, dispara el envío del código de restablecimiento.
+    No revela por sí mismo si el envío ocurrió, solo si el correo existe,
+    para permitir avanzar al paso 2 en el frontend.
+    """
     data   = request.json or {}
     correo = data.get('correo', '').strip().lower()
     if not correo:
@@ -419,39 +511,170 @@ def verificar_correo():
         cursor   = conexion.cursor()
         cursor.execute("SELECT idUsuario FROM usuarios WHERE correo = %s", (correo,))
         row = cursor.fetchone()
-        cursor.close(); conexion.close()
-        if row:
-            return jsonify({"existe": True})
-        else:
+
+        if not row:
+            cursor.close(); conexion.close()
             return jsonify({"existe": False, "mensaje": "No existe una cuenta con ese correo"}), 404
+
+        codigo = crear_codigo_verificacion(cursor, correo, 'reset')
+        conexion.commit()
+        cursor.close(); conexion.close()
+
+        enviar_correo_codigo(correo, codigo, 'reset')
+        return jsonify({"existe": True, "mensaje": "Te enviamos un código a tu correo."})
     except Exception as e:
         return jsonify({"existe": False, "mensaje": str(e)}), 500
 
 
+@app.route('/api/auth/enviar-codigo', methods=['POST'])
+def enviar_codigo():
+    """Reenvía / genera un nuevo código de verificación (registro o reset)."""
+    data       = request.json or {}
+    correo     = data.get('correo', '').strip().lower()
+    proposito  = data.get('proposito', 'registro').strip()
+
+    if not correo:
+        return jsonify({"status": "error", "mensaje": "Correo requerido"}), 400
+    if proposito not in ('registro', 'reset'):
+        return jsonify({"status": "error", "mensaje": "Propósito inválido"}), 400
+
+    try:
+        conexion = conectar_bd()
+        cursor   = conexion.cursor()
+        cursor.execute("SELECT idUsuario FROM usuarios WHERE correo = %s", (correo,))
+        if not cursor.fetchone():
+            cursor.close(); conexion.close()
+            return jsonify({"status": "error", "mensaje": "No existe una cuenta con ese correo"}), 404
+
+        codigo = crear_codigo_verificacion(cursor, correo, proposito)
+        conexion.commit()
+        cursor.close(); conexion.close()
+
+        enviar_correo_codigo(correo, codigo, proposito)
+        return jsonify({"status": "success", "mensaje": "Código enviado. Revisa tu correo."})
+    except Exception as e:
+        return jsonify({"status": "error", "mensaje": str(e)}), 500
+
+
+@app.route('/api/auth/verificar-codigo', methods=['POST'])
+def verificar_codigo():
+    """
+    Valida un código de 6 dígitos para 'registro' o 'reset'.
+    - registro: marca el correo como verificado y deja al usuario logueado.
+    - reset: solo marca el código como verificado (no lo consume aún);
+      restablecer_password lo vuelve a validar antes de cambiar la contraseña.
+    """
+    data      = request.json or {}
+    correo    = data.get('correo', '').strip().lower()
+    codigo    = data.get('codigo', '').strip()
+    proposito = data.get('proposito', 'registro').strip()
+
+    if not correo or not codigo:
+        return jsonify({"status": "error", "mensaje": "Correo y código son requeridos"}), 400
+
+    try:
+        conexion = conectar_bd()
+        cursor   = conexion.cursor(dictionary=True)
+        cursor.execute(
+            """SELECT * FROM verificaciones_email
+               WHERE correo=%s AND codigo=%s AND proposito=%s
+               ORDER BY idVerificacion DESC LIMIT 1""",
+            (correo, codigo, proposito)
+        )
+        fila = cursor.fetchone()
+
+        if not fila:
+            cursor.close(); conexion.close()
+            return jsonify({"status": "error", "mensaje": "Código inválido."}), 400
+        if fila['usado']:
+            cursor.close(); conexion.close()
+            return jsonify({"status": "error", "mensaje": "El código ya fue utilizado. Solicita uno nuevo."}), 400
+        if datetime.now() >= fila['expira_en']:
+            cursor.close(); conexion.close()
+            return jsonify({"status": "error", "mensaje": "El código ha expirado. Solicita uno nuevo."}), 400
+
+        if proposito == 'registro':
+            cursor.execute(
+                "UPDATE verificaciones_email SET usado=1, verificado=1 WHERE idVerificacion=%s",
+                (fila['idVerificacion'],)
+            )
+            cursor.execute(
+                "UPDATE usuarios SET email_verified=1, verified_at=%s WHERE correo=%s",
+                (datetime.now(), correo)
+            )
+            cursor.execute("SELECT nombre FROM usuarios WHERE correo=%s", (correo,))
+            usuario_row = cursor.fetchone()
+            conexion.commit()
+            cursor.close(); conexion.close()
+
+            # Auto-login tras verificar el registro
+            session['usuario_logueado'] = correo
+            if usuario_row:
+                session['usuario_nombre'] = usuario_row['nombre']
+
+            return jsonify({"status": "success", "mensaje": "Correo verificado.", "logueado": True})
+
+        else:  # reset: solo se marca como verificado, se consume al cambiar la contraseña
+            cursor.execute(
+                "UPDATE verificaciones_email SET verificado=1 WHERE idVerificacion=%s",
+                (fila['idVerificacion'],)
+            )
+            conexion.commit()
+            cursor.close(); conexion.close()
+            return jsonify({"status": "success", "mensaje": "Código verificado."})
+
+    except Exception as e:
+        return jsonify({"status": "error", "mensaje": str(e)}), 500
+
+
 @app.route('/api/auth/restablecer-password', methods=['POST'])
 def restablecer_password():
-    """Restablece la contraseña de un usuario dado su correo."""
-    data            = request.json or {}
-    correo          = data.get('correo', '').strip().lower()
-    nueva_password  = data.get('nueva_password', '')
+    """
+    Restablece la contraseña de un usuario. Requiere un código de
+    proposito='reset' ya verificado (vía /api/auth/verificar-codigo),
+    no usado y no expirado. Sin código válido, no cambia nada.
+    """
+    data           = request.json or {}
+    correo         = data.get('correo', '').strip().lower()
+    codigo         = data.get('codigo', '').strip()
+    nueva_password = data.get('nueva_password', '')
 
-    if not correo or not nueva_password:
+    if not correo or not codigo or not nueva_password:
         return jsonify({"status": "error", "mensaje": "Datos incompletos"}), 400
     if len(nueva_password) < 6:
         return jsonify({"status": "error", "mensaje": "La contraseña debe tener al menos 6 caracteres"}), 400
 
     try:
         conexion = conectar_bd()
-        cursor   = conexion.cursor()
+        cursor   = conexion.cursor(dictionary=True)
+        cursor.execute(
+            """SELECT * FROM verificaciones_email
+               WHERE correo=%s AND codigo=%s AND proposito='reset'
+               ORDER BY idVerificacion DESC LIMIT 1""",
+            (correo, codigo)
+        )
+        fila = cursor.fetchone()
+
+        if not fila or not fila['verificado']:
+            cursor.close(); conexion.close()
+            return jsonify({"status": "error", "mensaje": "Debes verificar el código antes de cambiar la contraseña."}), 400
+        if fila['usado']:
+            cursor.close(); conexion.close()
+            return jsonify({"status": "error", "mensaje": "El código ya fue utilizado. Solicita uno nuevo."}), 400
+        if datetime.now() >= fila['expira_en']:
+            cursor.close(); conexion.close()
+            return jsonify({"status": "error", "mensaje": "El código ha expirado. Solicita uno nuevo."}), 400
+
         cursor.execute(
             "UPDATE usuarios SET `contraseña` = %s WHERE correo = %s",
             (generate_password_hash(nueva_password), correo)
         )
+        cursor.execute(
+            "UPDATE verificaciones_email SET usado=1 WHERE idVerificacion=%s",
+            (fila['idVerificacion'],)
+        )
         conexion.commit()
-        filas = cursor.rowcount
         cursor.close(); conexion.close()
-        if filas == 0:
-            return jsonify({"status": "error", "mensaje": "No existe una cuenta con ese correo"}), 404
         return jsonify({"status": "success", "mensaje": "Contraseña actualizada correctamente"})
     except Exception as e:
         return jsonify({"status": "error", "mensaje": str(e)}), 500
@@ -473,12 +696,20 @@ def login():
     if not usuario:
         return jsonify({"status": "error", "mensaje": "El correo no está registrado"}), 404
 
-    if check_password_hash(usuario['contraseña'], contrasena_plana):
-        session['usuario_logueado'] = correo
-        session['usuario_nombre']   = usuario['nombre']
-        return jsonify({"status": "success", "mensaje": "Login exitoso"})
-    else:
+    if not check_password_hash(usuario['contraseña'], contrasena_plana):
         return jsonify({"status": "error", "mensaje": "Contraseña incorrecta"}), 401
+
+    if not usuario.get('email_verified'):
+        return jsonify({
+            "status": "error",
+            "mensaje": "Debes verificar tu correo antes de iniciar sesión.",
+            "requiere_verificacion": True,
+            "correo": correo
+        }), 403
+
+    session['usuario_logueado'] = correo
+    session['usuario_nombre']   = usuario['nombre']
+    return jsonify({"status": "success", "mensaje": "Login exitoso"})
 
 
 @app.route('/api/usuario/info', methods=['GET'])

@@ -468,7 +468,22 @@
                 <button class="btn-login" id="btnVerificar" onclick="verificarCorreo()" data-i18n="rec_verificar">Verificar correo</button>
             </div>
 
-            <!-- Paso 2: nueva contraseña (oculto hasta verificar) -->
+            <!-- Paso 2: código de verificación enviado por correo -->
+            <div id="paso-codigo-rec" style="display:none;">
+                <p class="form-subtitulo">Ingresa el código de 6 dígitos que enviamos a tu correo.</p>
+                <div class="campo">
+                    <label for="rec-codigo">Código de verificación</label>
+                    <div class="input-wrap">
+                        <input type="text" id="rec-codigo" placeholder="000000" maxlength="6" inputmode="numeric" autocomplete="one-time-code">
+                    </div>
+                </div>
+                <button class="btn-login" id="btnVerificarCodigoRec" onclick="verificarCodigoRec()">Verificar código</button>
+                <p style="text-align:center; margin-top:10px;">
+                    <button type="button" class="link-recuperar" onclick="verificarCorreo()">Reenviar código</button>
+                </p>
+            </div>
+
+            <!-- Paso 3: nueva contraseña (oculto hasta verificar código) -->
             <div id="paso-nueva-pass" style="display:none;">
                 <div class="campo">
                     <label for="rec-nueva">Nueva contraseña</label>
@@ -552,6 +567,21 @@
 
                 if (res.ok && data.status === 'success') {
                     window.location.assign('/dashboard');
+                } else if (res.status === 403 && data.requiere_verificacion) {
+                    // Cuenta existente pero correo aún no verificado: reenvía el código y manda al flujo de verificación
+                    mostrarRecuperar();
+                    document.getElementById('rec-correo').value = correo;
+                    mostrarErrorRec('Debes verificar tu correo. Te reenviamos un código.');
+                    fetch('/api/auth/enviar-codigo', {
+                        method:  'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body:    JSON.stringify({ correo, proposito: 'registro' })
+                    }).catch(() => {});
+                    document.getElementById('paso-correo').style.display = 'none';
+                    document.getElementById('paso-codigo-rec').style.display = 'block';
+                    window._recProposito = 'registro';
+                    btn.disabled = false;
+                    btn.textContent = 'Entrar al sistema';
                 } else {
                     mostrarError(data.mensaje || 'Credenciales inválidas');
                     btn.disabled = false;
@@ -576,10 +606,13 @@
             document.getElementById('panel-recuperar').classList.remove('visible');
             // Resetear estado
             document.getElementById('paso-correo').style.display = 'block';
+            document.getElementById('paso-codigo-rec').style.display = 'none';
             document.getElementById('paso-nueva-pass').style.display = 'none';
             document.getElementById('rec-correo').value = '';
+            document.getElementById('rec-codigo').value = '';
             document.getElementById('rec-nueva').value  = '';
             document.getElementById('rec-confirmar').value = '';
+            window._recProposito = 'reset';
             ocultarMsgRec();
         }
 
@@ -625,10 +658,11 @@
                 const data = await res.json();
 
                 if (res.ok && data.existe) {
-                    mostrarExitoRec('Correo verificado. Ahora elige tu nueva contraseña.');
+                    mostrarExitoRec(data.mensaje || 'Te enviamos un código a tu correo.');
                     document.getElementById('paso-correo').style.display = 'none';
-                    document.getElementById('paso-nueva-pass').style.display = 'block';
-                    document.getElementById('rec-nueva').focus();
+                    document.getElementById('paso-codigo-rec').style.display = 'block';
+                    window._recProposito = 'reset';
+                    document.getElementById('rec-codigo').focus();
                 } else {
                     mostrarErrorRec(data.mensaje || 'No existe una cuenta con ese correo.');
                 }
@@ -640,9 +674,51 @@
             }
         }
 
+        async function verificarCodigoRec() {
+            ocultarMsgRec();
+            const correo    = document.getElementById('rec-correo').value.trim();
+            const codigo    = document.getElementById('rec-codigo').value.trim();
+            const proposito = window._recProposito || 'reset';
+
+            if (!codigo) { mostrarErrorRec('Ingresa el código que enviamos a tu correo.'); return; }
+
+            const btn = document.getElementById('btnVerificarCodigoRec');
+            btn.disabled = true;
+            btn.textContent = 'Verificando…';
+
+            try {
+                const res  = await fetch('/api/auth/verificar-codigo', {
+                    method:  'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body:    JSON.stringify({ correo, codigo, proposito })
+                });
+                const data = await res.json();
+
+                if (res.ok && data.status === 'success') {
+                    if (proposito === 'registro' && data.logueado) {
+                        mostrarExitoRec('¡Correo verificado! Entrando…');
+                        setTimeout(() => window.location.assign('/dashboard'), 1000);
+                        return;
+                    }
+                    mostrarExitoRec('Código verificado. Ahora elige tu nueva contraseña.');
+                    document.getElementById('paso-codigo-rec').style.display = 'none';
+                    document.getElementById('paso-nueva-pass').style.display = 'block';
+                    document.getElementById('rec-nueva').focus();
+                } else {
+                    mostrarErrorRec(data.mensaje || 'Código inválido.');
+                }
+            } catch {
+                mostrarErrorRec('No se pudo conectar con el servidor.');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Verificar código';
+            }
+        }
+
         async function guardarNuevaPass() {
             ocultarMsgRec();
             const correo    = document.getElementById('rec-correo').value.trim();
+            const codigo    = document.getElementById('rec-codigo').value.trim();
             const nueva     = document.getElementById('rec-nueva').value;
             const confirmar = document.getElementById('rec-confirmar').value;
 
@@ -661,7 +737,7 @@
                 const res  = await fetch('/api/auth/restablecer-password', {
                     method:  'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body:    JSON.stringify({ correo, nueva_password: nueva })
+                    body:    JSON.stringify({ correo, codigo, nueva_password: nueva })
                 });
                 const data = await res.json();
 
