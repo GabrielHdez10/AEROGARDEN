@@ -1690,7 +1690,12 @@ def arduino_reportar_wifi():
     ssid      = data.get("ssid", "").strip()
 
     if not device_id or not ssid:
-        return jsonify({"error": "Faltan datos"}), 400
+                return jsonify({"error": "Faltan datos"}), 400
+
+    try:
+        device_id = int(device_id)
+    except (TypeError, ValueError):
+        return jsonify({"error": "device_id invalido"}), 400
 
     fecha = datetime.now().strftime("%d/%m/%Y %H:%M")
     with wifi_lock:
@@ -1733,15 +1738,19 @@ def wifi_configurar():
     if not ssid or not password:
         return jsonify({"status": "error", "mensaje": "SSID y contraseña requeridos"}), 400
 
+        # El navegador puede mandar el device_id como texto; el Arduino lo pide
+    # como entero. Sin esta conversion las llaves no coinciden y la
+    # configuracion nunca se entrega.
+    try:
+        device_id = int(device_id)
+    except (TypeError, ValueError):
+        return jsonify({"status": "error", "mensaje": "device_id invalido"}), 400
+
     with wifi_lock:
         wifi_pendiente[device_id] = {"ssid": ssid, "password": password}
 
-    fecha = datetime.now().strftime("%d/%m/%Y %H:%M")
-    wifi_actual[device_id] = {"ssid": ssid, "fecha": fecha}
-
-    hist = wifi_historial.setdefault(device_id, [])
-    hist[:] = [h for h in hist if h["ssid"] != ssid]
-    hist.append({"ssid": ssid, "fecha": fecha})
+    # wifi_actual y wifi_historial reflejan lo que el dispositivo reporta,
+    # no lo que el usuario pide. Se llenan solo desde /api/arduino/reportar_wifi.
 
     print(f"[WiFi dev={device_id}] Config pendiente → SSID: {ssid}")
     return jsonify({"status": "ok", "ssid": ssid})

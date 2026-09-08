@@ -2246,7 +2246,7 @@ async function enviarRedWifi() {
         const d = await r.json();
 
         if (r.ok && d.status === 'ok') {
-            toast('¡Red enviada al Arduino correctamente!', 'success');
+            toast('Red guardada. Se aplicará cuando el dispositivo se conecte.', 'success');
             document.getElementById('wifi-ssid').value = '';
             document.getElementById('wifi-pass').value = '';
             cargarRedActual();
