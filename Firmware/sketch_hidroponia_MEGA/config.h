@@ -5,10 +5,17 @@
 // Configuración de hardware — AeroGarden
 // Aquí van los pines, tiempos y constantes del sistema.
 // Los datos sensibles (token, servidor) están en secrets.h
+//
+// VERIFICADO 22/09/2026 — Mapa de pines confirmado por barrido
+// físico (17/09/2026). Ver nota en DHTPIN.
 // ============================================================
 
 // ── Sensores ────────────────────────────────────────────────
-#define DHTPIN        8      // DHT22: temperatura y humedad del aire
+// DHTPIN: la documentación heredada decía pin 8, pero el DHT22
+// está cableado físicamente al pin 6 (confirmado por barrido el
+// 17/09/2026). Se decidió ajustar el código y no mover el cable.
+// NO regresar a 8 sin revisar primero el cableado real.
+#define DHTPIN        6      // DHT22: temperatura y humedad del aire
 #define DHTTYPE       DHT22
 #define TRIG_PIN      53     // HC-SR04: disparo
 #define ECHO_PIN      51     // HC-SR04: eco
